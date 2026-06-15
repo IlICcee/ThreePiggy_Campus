@@ -396,14 +396,14 @@
             <span class="login-logo">🐷</span>
             <h2>FJUT · 校园助手</h2>
             <p class="login-sub">福建理工大学</p>
-            <input v-model="loginForm.username" type="text" placeholder="用户名" @keydown.enter="doLogin">
+            <input v-model="loginForm.username" type="text" placeholder="教师号 / 学号" @keydown.enter="doLogin">
             <input v-model="loginForm.password" type="password" placeholder="密码" @keydown.enter="doLogin">
             <button class="login-btn" @click="doLogin" :disabled="loggingIn">
                 {{ loggingIn ? '登录中...' : '登 录' }}
             </button>
             <p class="login-error" v-if="loginError">{{ loginError }}</p>
             <p class="login-hint">
-                教师测试：laoshi / 123456<br>学生测试：xuesheng / 654321
+                教师测试：1202001 / 123456<br>学生测试：325010101 / 123456
             </p>
         </div>
     </div>
