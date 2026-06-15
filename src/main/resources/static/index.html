@@ -328,6 +328,15 @@
         .static-info-card .info-table td { padding:8px 16px; border-bottom:1px solid var(--blue-pale); }
         .static-info-card .info-table td:first-child { font-weight:600; color:var(--blue-deep); white-space:nowrap; }
 
+        /* 可折叠卡片 */
+        .fold-card { background:var(--white); border-radius:14px; box-shadow:var(--shadow); border:2px solid var(--blue-pale); margin-top:12px; overflow:hidden; }
+        .fold-header { padding:14px 18px; cursor:pointer; font-size:15px; font-weight:700; color:var(--blue-deep); display:flex; align-items:center; gap:8px; user-select:none; transition:background 0.2s; }
+        .fold-header:hover { background:var(--blue-pale); }
+        .fold-arrow { font-size:10px; transition:transform 0.2s; display:inline-block; }
+        .fold-arrow.open { transform:rotate(90deg); }
+        .fold-body { padding:0 18px 14px; }
+        .fold-body .info-table { margin:0; }
+
         /* 地图 */
         .map-page { flex:1; background:var(--white); border-radius:20px; box-shadow:var(--shadow); border:2px solid var(--blue-pale); display:flex; flex-direction:column; overflow:hidden; min-height:400px; }
         .map-page-header { display:flex; align-items:center; gap:12px; padding:14px 20px; border-bottom:2px solid var(--blue-pale); background:#FAFCFE; }
@@ -639,17 +648,87 @@
                         </div>
                     </div>
 
-                    <!-- 奖学金 -->
+                    <!-- 奖学金（可折叠） -->
                     <div v-if="activeSub === 'scholarship'">
-                        <div class="static-info-card">
-                            <div class="info-icon">🏆</div><h3>奖学金评选结果</h3>
-                            <p>2025-2026 学年奖学金评选已结束</p>
-                            <table class="info-table">
-                                <tr><td>国家奖学金</td><td>8000元/人 · 已公示</td></tr>
-                                <tr><td>国家励志奖学金</td><td>5000元/人 · 已公示</td></tr>
-                                <tr><td>校级一等奖学金</td><td>3000元/人 · 已公示</td></tr>
-                                <tr><td>校级二等奖学金</td><td>1500元/人 · 已公示</td></tr>
-                            </table>
+                        <!-- 综合奖学金 -->
+                        <div class="fold-card">
+                            <div class="fold-header" @click="toggleFold('s1')">
+                                <span class="fold-arrow" :class="{open: folds.s1}">▶</span>
+                                <span class="info-icon">🏆</span> 综合奖学金等级
+                            </div>
+                            <div class="fold-body" v-show="folds.s1">
+                                <table class="info-table">
+                                    <tr><td>校长特别奖学金</td><td>全校≤10名 · 8000元/学年</td></tr>
+                                    <tr><td>一等奖学金</td><td>同专业前3% · 2000元/学年</td></tr>
+                                    <tr><td>二等奖学金</td><td>同专业前10% · 1000元/学年</td></tr>
+                                    <tr><td>三等奖学金</td><td>同专业前17% · 500元/学年</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        <!-- 一等奖学金条件 -->
+                        <div class="fold-card">
+                            <div class="fold-header" @click="toggleFold('s2')">
+                                <span class="fold-arrow" :class="{open: folds.s2}">▶</span>
+                                <span>🎯</span> 一等奖学金条件
+                            </div>
+                            <div class="fold-body" v-show="folds.s2">
+                                <table class="info-table">
+                                    <tr><td>学业成绩</td><td>加权平均成绩前5%，≥80分，单科≥70分</td></tr>
+                                    <tr><td>综合素质</td><td>考评积分前7%</td></tr>
+                                    <tr><td>英语要求</td><td>三年级须通过 CET-4 或 TEM-4</td></tr>
+                                    <tr><td>体育要求</td><td>大一/大二体育≥75分，其他年级体测达标</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        <!-- 取消资格 -->
+                        <div class="fold-card">
+                            <div class="fold-header" @click="toggleFold('s3')">
+                                <span class="fold-arrow" :class="{open: folds.s3}">▶</span>
+                                <span>❌</span> 取消资格的情况
+                            </div>
+                            <div class="fold-body" v-show="folds.s3">
+                                <table class="info-table">
+                                    <tr><td>补考</td><td>本学年存在补考科目</td></tr>
+                                    <tr><td>违纪</td><td>受警告及以上处分</td></tr>
+                                    <tr><td>宿舍</td><td>所在宿舍被通报3次及以上或不达标</td></tr>
+                                    <tr><td>旷课</td><td>累计旷课≥10学时</td></tr>
+                                    <tr><td>网络</td><td>发表不实言论或造成恶劣网络影响</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        <!-- 单项奖学金 -->
+                        <div class="fold-card">
+                            <div class="fold-header" @click="toggleFold('s4')">
+                                <span class="fold-arrow" :class="{open: folds.s4}">▶</span>
+                                <span>📋</span> 单项奖学金（9类）
+                            </div>
+                            <div class="fold-body" v-show="folds.s4">
+                                <table class="info-table">
+                                    <tr><td>学术科技创新奖</td><td>按竞赛获奖等级评定</td></tr>
+                                    <tr><td>文艺优秀奖</td><td>一/二/三等奖：500/300/200元</td></tr>
+                                    <tr><td>体育优胜奖</td><td>一/二/三等奖：500/300/200元</td></tr>
+                                    <tr><td>学习进步奖</td><td>专业排名进步≥25% · 200元</td></tr>
+                                    <tr><td>学习优秀奖</td><td>前5%/10%/20%：500/300/200元</td></tr>
+                                    <tr><td>社会工作奖</td><td>学生干部/社团负责人 · 200元</td></tr>
+                                    <tr><td>文明养成奖</td><td>三个文明积分≥160/140/120分</td></tr>
+                                    <tr><td>特殊贡献奖</td><td>见义勇为/抢险救灾 · 1000-10000元</td></tr>
+                                    <tr><td>创业实践奖</td><td>个人500元/团队200元</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        <!-- 评选时间 -->
+                        <div class="fold-card">
+                            <div class="fold-header" @click="toggleFold('s5')">
+                                <span class="fold-arrow" :class="{open: folds.s5}">▶</span>
+                                <span>📅</span> 评选时间
+                            </div>
+                            <div class="fold-body" v-show="folds.s5">
+                                <table class="info-table">
+                                    <tr><td>综合/单项奖学金</td><td>每年 9-10 月评定</td></tr>
+                                    <tr><td>校长特别奖学金</td><td>每年 5 月评定</td></tr>
+                                    <tr><td>毕业班</td><td>不参与奖学金评定，另设优秀毕业生奖 800元</td></tr>
+                                </table>
+                            </div>
                         </div>
                     </div>
 
@@ -719,6 +798,8 @@ createApp({
             loginForm: { username: '', password: '' },
             loginError: '',
             loggingIn: false,
+            // 奖学金折叠面板（s1默认展开）
+            folds: { s1: true, s2: false, s3: false, s4: false, s5: false },
 
             // 导航
             activeMenu: 'chat',
@@ -766,6 +847,7 @@ createApp({
         }
     },
     methods: {
+        toggleFold(k) { this.folds[k] = !this.folds[k]; },
         // ===== 登录 =====
         async doLogin() {
             const u = this.loginForm.username.trim();
