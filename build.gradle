@@ -31,6 +31,8 @@ dependencies {
     implementation 'com.alibaba.cloud.ai:spring-ai-alibaba-starter-dashscope'
     // Spring AI pgvector 向量存储
     implementation 'org.springframework.ai:spring-ai-pgvector-store:1.0.0'
+    // PDF 文档解析
+    implementation 'org.apache.pdfbox:pdfbox:3.0.1'
 }
 
 tasks.named('test') {

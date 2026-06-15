@@ -1,5 +1,8 @@
 package com.example.service;
 
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
@@ -7,6 +10,7 @@ import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
@@ -174,6 +178,24 @@ public class DocumentService {
     // ==================== 文件读取 ====================
 
     /**
+     * 读取 PDF 文件，提取纯文本
+     */
+    private String readPdf(Path filePath) {
+        try (InputStream in = Files.newInputStream(filePath);
+             PDDocument pdfDoc = Loader.loadPDF(in.readAllBytes())) {
+            PDFTextStripper stripper = new PDFTextStripper();
+            stripper.setSortByPosition(true);  // 按页面位置排序
+            String text = stripper.getText(pdfDoc);
+            log.info("PDF 解析成功: {} ({} 页, {} 字符)",
+                    filePath.getFileName(), pdfDoc.getNumberOfPages(), text.length());
+            return text;
+        } catch (IOException e) {
+            log.error("PDF 读取失败: {} - {}", filePath.getFileName(), e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * 根据扩展名读取文件内容
      */
     private String readFile(Path filePath, String ext) throws IOException {
@@ -181,10 +203,7 @@ public class DocumentService {
             case ".txt"  -> Files.readString(filePath, StandardCharsets.UTF_8);
             case ".md"   -> Files.readString(filePath, StandardCharsets.UTF_8);
             case ".html" -> Files.readString(filePath, StandardCharsets.UTF_8);
-            case ".pdf"  -> {
-                log.warn("PDF 需 Apache Tika 依赖，暂不支持: {}", filePath.getFileName());
-                yield null;
-            }
+            case ".pdf"  -> readPdf(filePath);
             case ".docx", ".doc" -> {
                 log.warn("Word 需 Apache Tika 依赖，暂不支持: {}", filePath.getFileName());
                 yield null;
