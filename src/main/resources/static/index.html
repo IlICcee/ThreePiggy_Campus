@@ -547,6 +547,13 @@
                             </div>
                         </div>
                     </div>
+                    <!-- 快捷提问 -->
+                    <div class="quick-chips" style="padding:6px 16px;display:flex;gap:8px;flex-wrap:wrap;">
+                        <span class="chip" @click="inputText='查看我的课表';send()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">📅 查看我的课表</span>
+                        <span class="chip" @click="inputText='查看我的成绩';send()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">📊 查看我的成绩</span>
+                        <span class="chip" @click="inputText='最近有什么通知';send()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">📢 最近通知</span>
+                        <span class="chip" v-if="isTeacher" @click="inputText='我这周有哪些课';send()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">🏫 我的授课安排</span>
+                    </div>
                     <div class="input-area">
                         <input v-model="inputText" type="text" placeholder="输入你的问题..." @keydown.enter="send" :disabled="sending" ref="inputRef">
                         <button class="send-btn" @click="send" :disabled="sending || !inputText.trim()">✈</button>
