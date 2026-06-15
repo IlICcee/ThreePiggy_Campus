@@ -10,7 +10,6 @@ import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
@@ -35,10 +34,13 @@ public class DocumentService {
     private static final Path KNOWLEDGE_BASE = Path.of("knowledge-base");
 
     /** 分块最大字符数（中文约 300 token ≈ 450 字符） */
-    private static final int CHUNK_MAX_LENGTH = 500;
+    private static final int CHUNK_MAX_LENGTH = 200;
 
     /** 相邻块的重叠字符数（避免关键信息被切断） */
     private static final int CHUNK_OVERLAP = 80;
+
+    /** 每批写入向量库的块数（避免 OOM） */
+    private static final int BATCH_SIZE = 5;
 
     private final PgVectorStore vectorStore;
 
@@ -88,8 +90,13 @@ public class DocumentService {
                         // 按段落分块
                         List<Document> chunks = splitIntoChunks(content, fileName, CHUNK_MAX_LENGTH, CHUNK_OVERLAP);
 
-                        // 向量化 + 入库
-                        vectorStore.add(chunks);
+                        // 分批向量化 + 入库（避免 OOM）
+                        for (int i = 0; i < chunks.size(); i += BATCH_SIZE) {
+                            int end = Math.min(i + BATCH_SIZE, chunks.size());
+                            vectorStore.add(chunks.subList(i, end));
+                            log.info("  批次 {}/{}: {} 块", (i / BATCH_SIZE) + 1,
+                                    (chunks.size() + BATCH_SIZE - 1) / BATCH_SIZE, end - i);
+                        }
 
                         totalFiles++;
                         totalChunks += chunks.size();
@@ -122,52 +129,85 @@ public class DocumentService {
     // ==================== 文档分块 ====================
 
     /**
-     * 将长文本按段落拆分为重叠的小块
+     * 将长文本拆分为重叠的小块
+     * 策略：优先按段落分，段落过长则按 maxLen 强制切分
      */
     private List<Document> splitIntoChunks(String text, String fileName, int maxLen, int overlap) {
         List<Document> chunks = new ArrayList<>();
-
-        // 先按段落分割
-        String[] paragraphs = text.split("\\n\\s*\\n");
         StringBuilder currentChunk = new StringBuilder();
-        String prevOverlap = ""; // 上一块的尾部文本作为重叠
 
-        for (int i = 0; i < paragraphs.length; i++) {
-            String para = paragraphs[i].strip();
-            if (para.isEmpty()) continue;
+        // 统一换行符，并在中文标点后插入分段提示
+        String normalized = text.replace("\r\n", "\n").replace("\r", "\n");
+        // 只在存在空行时才按段落分，否则按字符数硬切
+        String[] paragraphs = normalized.split("\\n\\s*\\n");
 
-            if (currentChunk.length() + para.length() > maxLen && currentChunk.length() > 0) {
-                // 当前块已满，存入
-                chunks.add(createChunk(currentChunk.toString(), fileName, chunks.size()));
+        for (String para : paragraphs) {
+            String p = para.strip();
+            if (p.isEmpty()) continue;
 
-                // 保留尾部作为下一个块的重叠
-                String chunkText = currentChunk.toString();
-                if (chunkText.length() > overlap) {
-                    prevOverlap = chunkText.substring(chunkText.length() - overlap);
-                } else {
-                    prevOverlap = chunkText;
+            // 如果当前段落本身就很长，先切成小段
+            List<String> subChunks = splitLongText(p, maxLen, overlap, fileName);
+
+            for (String sub : subChunks) {
+                if (currentChunk.length() + sub.length() > maxLen && currentChunk.length() > 0) {
+                    chunks.add(createChunk(currentChunk.toString(), fileName, chunks.size()));
+                    currentChunk = new StringBuilder();
                 }
-                currentChunk = new StringBuilder(prevOverlap.isEmpty() ? "" : prevOverlap + "\n\n");
-            }
-
-            if (currentChunk.length() > 0) {
-                currentChunk.append(para).append("\n\n");
-            } else {
-                currentChunk.append(para).append("\n\n");
+                if (currentChunk.length() > 0) {
+                    currentChunk.append(sub).append("\n\n");
+                } else {
+                    currentChunk.append(sub).append("\n\n");
+                }
             }
         }
 
-        // 最后一块
         if (currentChunk.length() > 0) {
             chunks.add(createChunk(currentChunk.toString(), fileName, chunks.size()));
         }
 
-        // 如果没分出块（单段落、无空行），整个文本作为一块
         if (chunks.isEmpty()) {
             chunks.add(createChunk(text, fileName, 0));
         }
 
         return chunks;
+    }
+
+    /**
+     * 将过长文本按 maxLen 强制切分，块间有 overlap 重叠
+     */
+    private List<String> splitLongText(String text, int maxLen, int overlap, String fileName) {
+        List<String> result = new ArrayList<>();
+        if (text.length() <= maxLen) {
+            result.add(text);
+            return result;
+        }
+        int start = 0;
+        while (start < text.length()) {
+            int end = Math.min(start + maxLen, text.length());
+            // 尝试在标点处断开，避免切断句子
+            if (end < text.length()) {
+                int cutPoint = findCutPoint(text, end, start + maxLen / 2);
+                end = cutPoint;
+            }
+            result.add(text.substring(start, end));
+            start = end - overlap; // 重叠
+            if (start >= text.length()) break;
+            if (start < 0) start = 0;
+        }
+        return result;
+    }
+
+    /**
+     * 在 [minPos, end] 范围内找最佳切分点（句号、换行等）
+     */
+    private int findCutPoint(String text, int end, int minPos) {
+        for (int i = end; i >= minPos; i--) {
+            char c = text.charAt(i);
+            if (c == '\n' || c == '。' || c == '！' || c == '？' || c == '；' || c == ' ') {
+                return i + 1;
+            }
+        }
+        return end;
     }
 
     private Document createChunk(String content, String fileName, int index) {
@@ -181,13 +221,14 @@ public class DocumentService {
      * 读取 PDF 文件，提取纯文本
      */
     private String readPdf(Path filePath) {
-        try (InputStream in = Files.newInputStream(filePath);
-             PDDocument pdfDoc = Loader.loadPDF(in.readAllBytes())) {
+        try (PDDocument pdfDoc = Loader.loadPDF(filePath.toFile())) {
             PDFTextStripper stripper = new PDFTextStripper();
-            stripper.setSortByPosition(true);  // 按页面位置排序
+            stripper.setSortByPosition(false);
             String text = stripper.getText(pdfDoc);
+            int pages = pdfDoc.getNumberOfPages();
+            pdfDoc.close();
             log.info("PDF 解析成功: {} ({} 页, {} 字符)",
-                    filePath.getFileName(), pdfDoc.getNumberOfPages(), text.length());
+                    filePath.getFileName(), pages, text.length());
             return text;
         } catch (IOException e) {
             log.error("PDF 读取失败: {} - {}", filePath.getFileName(), e.getMessage());
