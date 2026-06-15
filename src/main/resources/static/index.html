@@ -938,8 +938,14 @@ createApp({
                     const errText = await res.text();
                     throw new Error('服务器返回 ' + res.status + ': ' + errText.substring(0, 80));
                 }
-                const text = await res.text();
-                this.messages.push({ role: 'ai', content: text });
+                // 后端返回 {success, message, sources} JSON，取 message 字段
+                const data = await res.json();
+                let content = data.message || '';
+                // 如果有知识库来源，附加显示
+                if (data.sources && data.sources.length > 0) {
+                    content += '\n\n📚 参考来源：' + data.sources.join('、');
+                }
+                this.messages.push({ role: 'ai', content: content });
             } catch (e) {
                 const idx = this.messages.indexOf(loadingMsg);
                 if (idx > -1) this.messages.splice(idx, 1);
