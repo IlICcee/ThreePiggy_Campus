@@ -13,7 +13,7 @@ spring:
 
   ai:
     dashscope:
-      api-key: ${DASHSCOPE_API_KEY:your-dashscope-api-key-here}
+      api-key: ${DASHSCOPE_API_KEY:sk-ws-H.RELMPRD.qIUp.MEUCIAlj3GaxUfofMUcmijyT6KWkEcAgu-xI6geBhOYqM8rHAiEA-r3oRofnIOcirSuxsj01fQsmt1YUlAI8lhO-83W7Ylw}
 
 server:
   port: 8088
