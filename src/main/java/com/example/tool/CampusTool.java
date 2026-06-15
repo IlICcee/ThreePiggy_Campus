@@ -24,8 +24,8 @@ public class CampusTool {
     @Tool(description = "查询最近的校园公告，返回公告标题和内容列表")
     public String getRecentNotices() {
         try {
-            // H2 MSSQL 兼容模式下支持 TOP，SQL Server 原生支持 TOP
-            String sql = "SELECT TOP 5 title, content FROM notice ORDER BY publish_time DESC";
+            // PostgreSQL 语法：LIMIT 替代 TOP
+            String sql = "SELECT title, content FROM notice ORDER BY publish_time DESC LIMIT 5";
 
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql);
             if (rows.isEmpty()) {
