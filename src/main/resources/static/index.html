@@ -930,7 +930,11 @@ createApp({
                 const res = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: msg })
+                    body: JSON.stringify({
+                        message: msg,
+                        userRole: this.currentUser?.role || '',
+                        userNo: this.currentUser?.teacher_no || this.currentUser?.student_no || ''
+                    })
                 });
                 const idx = this.messages.indexOf(loadingMsg);
                 if (idx > -1) this.messages.splice(idx, 1);

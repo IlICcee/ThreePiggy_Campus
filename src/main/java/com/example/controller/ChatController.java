@@ -36,23 +36,41 @@ public class ChatController {
         this.documentService = documentService;
     }
 
-    // ==================== AI 聊天（带 RAG 检索增强） ====================
+    // ==================== AI 聊天（带 RAG 检索增强 + 个人课表） ====================
     @PostMapping("/chat")
     public Map<String, Object> chat(@RequestBody ChatRequest request) {
         Map<String, Object> result = new HashMap<>();
 
         try {
             String userMessage = request.getMessage();
-            String systemPrompt = null;
+            String userRole = request.getUserRole();
+            String userNo = request.getUserNo();
+            StringBuilder systemPrompt = new StringBuilder();
             List<String> sources = new ArrayList<>();
 
-            // ── RAG: 从向量库检索相关知识 ──
+            // ── 0. 默认身份提示 ──
+            systemPrompt.append("你是 FJUT 校园AI助手。请用中文回答。");
+            if (userRole != null && userNo != null) {
+                systemPrompt.append(" 当前用户是").append(userRole.equals("teacher") ? "教师" : "学生")
+                        .append("，编号").append(userNo).append("。");
+            }
+
+            // ── 1. 注入用户个人课表 ──
+            if (userRole != null && userNo != null) {
+                try {
+                    String scheduleText = buildScheduleContext(userRole, userNo);
+                    if (!scheduleText.isEmpty()) {
+                        systemPrompt.append("\n\n【用户个人课表】\n").append(scheduleText);
+                    }
+                } catch (Exception e) {
+                    log.warn("查询课表失败: {}", e.getMessage());
+                }
+            }
+
+            // ── 2. RAG: 从向量库检索相关知识 ──
             try {
                 SearchRequest searchReq = SearchRequest.builder()
-                        .query(userMessage)
-                        .topK(5)
-                        .similarityThreshold(0.4)
-                        .build();
+                        .query(userMessage).topK(5).similarityThreshold(0.4).build();
                 List<Document> docs = vectorStore.similaritySearch(searchReq);
                 if (!docs.isEmpty()) {
                     String context = docs.stream()
@@ -64,34 +82,21 @@ public class ChatController {
                                 return d.getText();
                             })
                             .collect(Collectors.joining("\n\n---\n\n"));
-
-                    systemPrompt = """
-                            你是 FJUT 校园AI助手。请**仅基于**以下知识库内容回答用户问题。
-                            如果知识库中没有相关信息，请如实说"知识库中暂无相关信息"，
-                            不要自行编造。
-
-                            【知识库参考内容】
-                            %s
-                            """.formatted(context);
+                    systemPrompt.append("\n\n【知识库参考内容】\n").append(context)
+                            .append("\n\n如果知识库中有相关信息，请基于知识库回答。");
                 }
             } catch (Exception e) {
-                log.warn("向量检索失败（可能向量库为空）: {}", e.getMessage());
+                log.warn("向量检索失败: {}", e.getMessage());
             }
 
+            systemPrompt.append(" 如果以上信息都不足以回答用户问题，请如实说明，不要编造。");
+
             // ── 调用 AI ──
-            String answer;
-            if (systemPrompt != null) {
-                answer = chatClient.prompt()
-                        .system(systemPrompt)
-                        .user(userMessage)
-                        .call()
-                        .content();
-            } else {
-                answer = chatClient.prompt()
-                        .user(userMessage)
-                        .call()
-                        .content();
-            }
+            String answer = chatClient.prompt()
+                    .system(systemPrompt.toString())
+                    .user(userMessage)
+                    .call()
+                    .content();
 
             result.put("success", true);
             result.put("message", answer);
@@ -326,9 +331,59 @@ public class ChatController {
         return result;
     }
 
+    // ==================== 课表上下文构建 ====================
+
+    private String buildScheduleContext(String role, String no) {
+        StringBuilder sb = new StringBuilder();
+        if ("teacher".equals(role)) {
+            List<Map<String, Object>> courses = jdbcTemplate.queryForList(
+                "SELECT c.course_name, c.schedule_day, c.schedule_time, c.classroom, c.major " +
+                "FROM course c JOIN teacher t ON c.teacher_id = t.id " +
+                "WHERE t.teacher_no = ? ORDER BY c.schedule_day, c.schedule_time", no);
+            if (courses.isEmpty()) return "";
+            sb.append("授课安排：\n");
+            for (Map<String, Object> c : courses) {
+                sb.append("- ").append(c.get("schedule_day")).append(" ").append(c.get("schedule_time"))
+                  .append(" ").append(c.get("course_name")).append(" ").append(c.get("classroom"))
+                  .append("（").append(c.get("major")).append("）\n");
+            }
+        } else {
+            List<Map<String, Object>> info = jdbcTemplate.queryForList(
+                "SELECT name, major, class_name FROM student WHERE student_no = ?", no);
+            if (info.isEmpty()) return "";
+            sb.append("姓名：").append(info.get(0).get("name"))
+              .append("，专业：").append(info.get(0).get("major"))
+              .append("，班级：").append(info.get(0).get("class_name")).append("\n");
+
+            List<Map<String, Object>> grades = jdbcTemplate.queryForList(
+                "SELECT c.course_name, g.score, g.grade_point, c.credits " +
+                "FROM grade g JOIN course c ON g.course_id = c.id " +
+                "JOIN student s ON g.student_id = s.id WHERE s.student_no = ?", no);
+            if (!grades.isEmpty()) {
+                double total = 0; double weighted = 0;
+                sb.append("成绩：\n");
+                for (Map<String, Object> g : grades) {
+                    sb.append("- ").append(g.get("course_name")).append("：").append(g.get("score")).append("分\n");
+                    double gp = ((Number) g.get("grade_point")).doubleValue();
+                    double cr = ((Number) g.get("credits")).doubleValue();
+                    weighted += gp * cr; total += cr;
+                }
+                double gpa = total > 0 ? Math.round(weighted / total * 100.0) / 100.0 : 0;
+                sb.append("GPA：").append(gpa).append("\n");
+            }
+        }
+        return sb.toString();
+    }
+
     public static class ChatRequest {
         private String message;
+        private String userRole;   // "teacher" or "student"
+        private String userNo;     // 教师号 or 学号
         public String getMessage() { return message; }
         public void setMessage(String message) { this.message = message; }
+        public String getUserRole() { return userRole; }
+        public void setUserRole(String userRole) { this.userRole = userRole; }
+        public String getUserNo() { return userNo; }
+        public void setUserNo(String userNo) { this.userNo = userNo; }
     }
 }
