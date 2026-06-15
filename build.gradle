@@ -20,15 +20,17 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    runtimeOnly 'com.microsoft.sqlserver:mssql-jdbc'
-    runtimeOnly 'com.h2database:h2'
+    // PostgreSQL 数据库（替代 H2 / SQL Server）
+    runtimeOnly 'org.postgresql:postgresql'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
-    // Spring AI Alibaba DashScope (百炼平台)
+    // Spring AI Alibaba DashScope (百炼平台) — 自带 Spring AI 1.0.0 核心依赖
     implementation platform('com.alibaba.cloud.ai:spring-ai-alibaba-bom:1.0.0.2')
     implementation 'com.alibaba.cloud.ai:spring-ai-alibaba-starter-dashscope'
+    // Spring AI pgvector 向量存储
+    implementation 'org.springframework.ai:spring-ai-pgvector-store:1.0.0'
 }
 
 tasks.named('test') {
