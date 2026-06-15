@@ -351,10 +351,26 @@ public class ChatController {
             List<Map<String, Object>> info = jdbcTemplate.queryForList(
                 "SELECT name, major, class_name FROM student WHERE student_no = ?", no);
             if (info.isEmpty()) return "";
+            String major = (String) info.get(0).get("major");
             sb.append("姓名：").append(info.get(0).get("name"))
-              .append("，专业：").append(info.get(0).get("major"))
+              .append("，专业：").append(major)
               .append("，班级：").append(info.get(0).get("class_name")).append("\n");
 
+            // -- 课表 --
+            List<Map<String, Object>> schedule = jdbcTemplate.queryForList(
+                "SELECT c.course_name, t.name AS teacher, c.schedule_day, c.schedule_time, c.classroom, c.credits " +
+                "FROM course c LEFT JOIN teacher t ON c.teacher_id = t.id " +
+                "WHERE c.major = ? ORDER BY c.schedule_day, c.schedule_time", major);
+            if (!schedule.isEmpty()) {
+                sb.append("课表：\n");
+                for (Map<String, Object> c : schedule) {
+                    sb.append("- ").append(c.get("schedule_day")).append(" ").append(c.get("schedule_time"))
+                      .append(" ").append(c.get("course_name")).append("（").append(c.get("teacher"))
+                      .append("）").append(c.get("classroom")).append("\n");
+                }
+            }
+
+            // -- 成绩 --
             List<Map<String, Object>> grades = jdbcTemplate.queryForList(
                 "SELECT c.course_name, g.score, g.grade_point, c.credits " +
                 "FROM grade g JOIN course c ON g.course_id = c.id " +
