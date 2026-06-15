@@ -1,154 +1,88 @@
 package com.example.controller;
 
-import com.example.model.Course;
-import com.example.model.Grade;
-import com.example.model.Student;
-import com.example.service.StudentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/student")
 public class StudentController {
 
     private static final Logger log = LoggerFactory.getLogger(StudentController.class);
-    private final StudentService studentService;
+    private final JdbcTemplate jdbc;
 
-    public StudentController(StudentService studentService) {
-        this.studentService = studentService;
+    public StudentController(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
     }
 
-    // ==================== 登录 ====================
-    @PostMapping("/login")
-    public Map<String, Object> login(@RequestBody LoginRequest request) {
-        Map<String, Object> result = new HashMap<>();
-        Student student = studentService.login(request.getStudentNo(), request.getPassword());
-        if (student != null) {
-            result.put("success", true);
-            result.put("student", student);
-            result.put("message", "登录成功，欢迎 " + student.getName() + "！");
-        } else {
-            result.put("success", false);
-            result.put("message", "学号或密码错误，请重试");
-        }
-        return result;
-    }
-
-    // ==================== 获取学生信息 ====================
-    @GetMapping("/info")
-    public Map<String, Object> info(@RequestParam Long studentId) {
-        Map<String, Object> result = new HashMap<>();
-        Student student = studentService.getStudentById(studentId);
-        if (student != null) {
-            result.put("success", true);
-            result.put("student", student);
-        } else {
-            result.put("success", false);
-            result.put("message", "学生不存在");
-        }
-        return result;
-    }
-
-    // ==================== 查询成绩 ====================
-    @GetMapping("/grades")
-    public Map<String, Object> grades(@RequestParam Long studentId) {
-        Map<String, Object> result = new HashMap<>();
-        Student student = studentService.getStudentById(studentId);
-        if (student == null) {
-            result.put("success", false);
-            result.put("message", "学生不存在");
-            return result;
-        }
-        List<Grade> grades = studentService.getGrades(studentId);
-
-        // 计算统计信息
-        double totalCredits = grades.stream().mapToDouble(Grade::getCredits).sum();
-        double weightedSum = 0;
-        for (Grade g : grades) {
-            weightedSum += g.getGradePoint() * g.getCredits();
-        }
-        double gpa = totalCredits > 0 ? Math.round(weightedSum / totalCredits * 100.0) / 100.0 : 0.0;
-
-        result.put("success", true);
-        result.put("studentName", student.getName());
-        result.put("studentNo", student.getStudentNo());
-        result.put("major", student.getMajor());
-        result.put("semester", "2025-2026-2");
-        result.put("grades", grades);
-        result.put("gpa", gpa);
-        result.put("totalCredits", totalCredits);
-        return result;
-    }
-
-    // ==================== 查询课表 ====================
+    // ==================== 学生课表 ====================
     @GetMapping("/courses")
-    public Map<String, Object> courses(@RequestParam Long studentId) {
+    public Map<String, Object> courses(@RequestParam String studentNo) {
         Map<String, Object> result = new HashMap<>();
-        Student student = studentService.getStudentById(studentId);
-        if (student == null) {
-            result.put("success", false);
-            result.put("message", "学生不存在");
-            return result;
-        }
-        List<Course> courses = studentService.getCourses(studentId);
-        double totalCredits = courses.stream().mapToDouble(Course::getCredits).sum();
+        try {
+            // 查学生专业
+            List<Map<String, Object>> stuList = jdbc.queryForList(
+                "SELECT name, major, class_name FROM student WHERE student_no = ?", studentNo);
+            if (stuList.isEmpty()) {
+                result.put("success", false); result.put("message", "学生不存在"); return result;
+            }
+            String major = (String) stuList.get(0).get("major");
 
-        result.put("success", true);
-        result.put("studentName", student.getName());
-        result.put("major", student.getMajor());
-        result.put("semester", "2025-2026-2");
-        result.put("courses", courses);
-        result.put("totalCredits", totalCredits);
-        result.put("courseCount", courses.size());
+            List<Map<String, Object>> courses = jdbc.queryForList(
+                "SELECT c.course_name, t.name AS teacher, c.schedule_day, c.schedule_time, " +
+                "c.classroom, c.credits FROM course c " +
+                "LEFT JOIN teacher t ON c.teacher_id = t.id " +
+                "WHERE c.major = ? ORDER BY c.schedule_day, c.schedule_time", major);
+
+            result.put("success", true);
+            result.put("name", stuList.get(0).get("name"));
+            result.put("major", major);
+            result.put("courses", courses);
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("message", "查询失败: " + e.getMessage());
+        }
         return result;
     }
 
-    // ==================== 学分汇总 ====================
-    @GetMapping("/credits")
-    public Map<String, Object> credits(@RequestParam Long studentId) {
+    // ==================== 学生成绩 ====================
+    @GetMapping("/grades")
+    public Map<String, Object> grades(@RequestParam String studentNo) {
         Map<String, Object> result = new HashMap<>();
-        Student student = studentService.getStudentById(studentId);
-        if (student == null) {
+        try {
+            List<Map<String, Object>> stuList = jdbc.queryForList(
+                "SELECT name, major FROM student WHERE student_no = ?", studentNo);
+            if (stuList.isEmpty()) {
+                result.put("success", false); result.put("message", "学生不存在"); return result;
+            }
+
+            List<Map<String, Object>> grades = jdbc.queryForList(
+                "SELECT c.course_name, g.score, g.grade_point, c.credits " +
+                "FROM grade g JOIN course c ON g.course_id = c.id " +
+                "JOIN student s ON g.student_id = s.id " +
+                "WHERE s.student_no = ?", studentNo);
+
+            double totalCredits = 0, weightedSum = 0;
+            for (Map<String, Object> g : grades) {
+                double gp = ((Number) g.get("grade_point")).doubleValue();
+                double cr = ((Number) g.get("credits")).doubleValue();
+                weightedSum += gp * cr;
+                totalCredits += cr;
+            }
+            double gpa = totalCredits > 0 ? Math.round(weightedSum / totalCredits * 100.0) / 100.0 : 0.0;
+
+            result.put("success", true);
+            result.put("name", stuList.get(0).get("name"));
+            result.put("grades", grades);
+            result.put("gpa", gpa);
+            result.put("totalCredits", totalCredits);
+        } catch (Exception e) {
             result.put("success", false);
-            result.put("message", "学生不存在");
-            return result;
+            result.put("message", "查询失败: " + e.getMessage());
         }
-        Map<String, Object> creditsData = studentService.getCredits(studentId);
-        result.put("success", true);
-        result.putAll(creditsData);
         return result;
-    }
-
-    // ==================== 专业排名 ====================
-    @GetMapping("/ranking")
-    public Map<String, Object> ranking(@RequestParam Long studentId) {
-        Map<String, Object> result = new HashMap<>();
-        Student student = studentService.getStudentById(studentId);
-        if (student == null) {
-            result.put("success", false);
-            result.put("message", "学生不存在");
-            return result;
-        }
-        Map<String, Object> rankingData = studentService.getRanking(studentId);
-        result.put("success", true);
-        result.putAll(rankingData);
-        return result;
-    }
-
-    // ==================== 请求体类 ====================
-    public static class LoginRequest {
-        private String studentNo;
-        private String password;
-
-        public String getStudentNo() { return studentNo; }
-        public void setStudentNo(String studentNo) { this.studentNo = studentNo; }
-
-        public String getPassword() { return password; }
-        public void setPassword(String password) { this.password = password; }
     }
 }

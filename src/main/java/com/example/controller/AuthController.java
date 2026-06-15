@@ -5,37 +5,47 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 
+/**
+ * 统一登录：支持教师号 / 学号 + 密码登录
+ */
 @RestController
 @RequestMapping("/api")
 public class AuthController {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final JdbcTemplate jdbc;
 
-    public AuthController(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    public AuthController(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
     }
 
     @PostMapping("/login")
-    public Map<String, Object> login(@RequestBody LoginRequest request) {
+    public Map<String, Object> login(@RequestBody LoginRequest req) {
         Map<String, Object> result = new HashMap<>();
-        try {
-            List<Map<String, Object>> users = jdbcTemplate.queryForList(
-                "SELECT id, username, role, name FROM users WHERE username = ? AND password = ?",
-                request.getUsername(), request.getPassword()
-            );
-            if (!users.isEmpty()) {
-                Map<String, Object> user = users.get(0);
-                result.put("success", true);
-                result.put("user", user);
-                result.put("message", "登录成功！欢迎" + user.get("name"));
-            } else {
-                result.put("success", false);
-                result.put("message", "用户名或密码错误");
-            }
-        } catch (Exception e) {
-            result.put("success", false);
-            result.put("message", "登录失败: " + e.getMessage());
+        String id = req.getUsername().trim();
+        String pw = req.getPassword().trim();
+
+        // 1) 先查教师表
+        List<Map<String, Object>> teachers = jdbc.queryForList(
+            "SELECT id, teacher_no, name, 'teacher' AS role FROM teacher WHERE teacher_no = ? AND password = ?", id, pw);
+        if (!teachers.isEmpty()) {
+            result.put("success", true);
+            result.put("user", teachers.get(0));
+            result.put("message", "登录成功！欢迎" + teachers.get(0).get("name") + "老师");
+            return result;
         }
+
+        // 2) 再查学生表
+        List<Map<String, Object>> students = jdbc.queryForList(
+            "SELECT id, student_no, name, major, class_name, 'student' AS role FROM student WHERE student_no = ? AND password = ?", id, pw);
+        if (!students.isEmpty()) {
+            result.put("success", true);
+            result.put("user", students.get(0));
+            result.put("message", "登录成功！欢迎" + students.get(0).get("name") + "同学");
+            return result;
+        }
+
+        result.put("success", false);
+        result.put("message", "账号或密码错误");
         return result;
     }
 

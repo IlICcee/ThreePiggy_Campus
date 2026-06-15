@@ -108,6 +108,23 @@ public class ChatController {
         return result;
     }
 
+    // ==================== 诊断：单独测 Embedding ====================
+    @GetMapping("/knowledge/test-embed")
+    public Map<String, Object> testEmbed() {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            String testText = "测试文本：奖学金评定标准";
+            org.springframework.ai.document.Document doc = new org.springframework.ai.document.Document(testText, Map.of());
+            vectorStore.add(List.of(doc));
+            result.put("success", true);
+            result.put("message", "嵌入成功！文字: " + testText);
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("message", "嵌入失败: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+        }
+        return result;
+    }
+
     // ==================== 知识库导入 ====================
     @PostMapping("/knowledge/import")
     public Map<String, Object> importKnowledge() {

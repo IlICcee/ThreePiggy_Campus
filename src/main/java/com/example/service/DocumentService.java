@@ -129,85 +129,30 @@ public class DocumentService {
     // ==================== 文档分块 ====================
 
     /**
-     * 将长文本拆分为重叠的小块
-     * 策略：优先按段落分，段落过长则按 maxLen 强制切分
+     * 按段落分块，每块不超过 maxLen 字符
      */
     private List<Document> splitIntoChunks(String text, String fileName, int maxLen, int overlap) {
         List<Document> chunks = new ArrayList<>();
-        StringBuilder currentChunk = new StringBuilder();
-
-        // 统一换行符，并在中文标点后插入分段提示
         String normalized = text.replace("\r\n", "\n").replace("\r", "\n");
-        // 只在存在空行时才按段落分，否则按字符数硬切
-        String[] paragraphs = normalized.split("\\n\\s*\\n");
+        StringBuilder buf = new StringBuilder();
+        int idx = 0;
 
-        for (String para : paragraphs) {
+        for (String para : normalized.split("\n")) {
             String p = para.strip();
             if (p.isEmpty()) continue;
-
-            // 如果当前段落本身就很长，先切成小段
-            List<String> subChunks = splitLongText(p, maxLen, overlap, fileName);
-
-            for (String sub : subChunks) {
-                if (currentChunk.length() + sub.length() > maxLen && currentChunk.length() > 0) {
-                    chunks.add(createChunk(currentChunk.toString(), fileName, chunks.size()));
-                    currentChunk = new StringBuilder();
-                }
-                if (currentChunk.length() > 0) {
-                    currentChunk.append(sub).append("\n\n");
-                } else {
-                    currentChunk.append(sub).append("\n\n");
-                }
+            if (buf.length() + p.length() > maxLen && buf.length() > 0) {
+                chunks.add(createChunk(buf.toString(), fileName, idx++));
+                buf.setLength(0);
             }
+            buf.append(p).append("\n");
         }
-
-        if (currentChunk.length() > 0) {
-            chunks.add(createChunk(currentChunk.toString(), fileName, chunks.size()));
+        if (buf.length() > 0) {
+            chunks.add(createChunk(buf.toString(), fileName, idx));
         }
-
         if (chunks.isEmpty()) {
             chunks.add(createChunk(text, fileName, 0));
         }
-
         return chunks;
-    }
-
-    /**
-     * 将过长文本按 maxLen 强制切分，块间有 overlap 重叠
-     */
-    private List<String> splitLongText(String text, int maxLen, int overlap, String fileName) {
-        List<String> result = new ArrayList<>();
-        if (text.length() <= maxLen) {
-            result.add(text);
-            return result;
-        }
-        int start = 0;
-        while (start < text.length()) {
-            int end = Math.min(start + maxLen, text.length());
-            // 尝试在标点处断开，避免切断句子
-            if (end < text.length()) {
-                int cutPoint = findCutPoint(text, end, start + maxLen / 2);
-                end = cutPoint;
-            }
-            result.add(text.substring(start, end));
-            start = end - overlap; // 重叠
-            if (start >= text.length()) break;
-            if (start < 0) start = 0;
-        }
-        return result;
-    }
-
-    /**
-     * 在 [minPos, end] 范围内找最佳切分点（句号、换行等）
-     */
-    private int findCutPoint(String text, int end, int minPos) {
-        for (int i = end; i >= minPos; i--) {
-            char c = text.charAt(i);
-            if (c == '\n' || c == '。' || c == '！' || c == '？' || c == '；' || c == ' ') {
-                return i + 1;
-            }
-        }
-        return end;
     }
 
     private Document createChunk(String content, String fileName, int index) {
