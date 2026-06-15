@@ -51,7 +51,7 @@ public class ChatController {
                 SearchRequest searchReq = SearchRequest.builder()
                         .query(userMessage)
                         .topK(5)
-                        .similarityThreshold(0.6)
+                        .similarityThreshold(0.4)
                         .build();
                 List<Document> docs = vectorStore.similaritySearch(searchReq);
                 if (!docs.isEmpty()) {

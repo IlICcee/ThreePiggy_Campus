@@ -115,98 +115,98 @@ public class DataInitializer {
                     """);
 
                 // ------------------------------------------------------------
-                // 种子数据
+                // 种子数据（幂等：先删后插，每次启动重置为初始状态）
                 // ------------------------------------------------------------
-
-                // -- 用户 --
-                Integer userCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM users", Integer.class);
-                if (userCount != null && userCount == 0) {
-                    jdbcTemplate.update("INSERT INTO users (username, password, role, name) VALUES (?, ?, ?, ?)",
-                            "laoshi", "123456", "teacher", "张老师");
-                    jdbcTemplate.update("INSERT INTO users (username, password, role, name) VALUES (?, ?, ?, ?)",
-                            "xuesheng", "654321", "student", "李同学");
-                    log.info("已创建教师和学生账号");
-                }
-
-                // -- 公告 --
-                Integer noticeCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM notice", Integer.class);
-                if (noticeCount != null && noticeCount == 0) {
-                    jdbcTemplate.update("INSERT INTO notice (title, content, publish_time) VALUES (?, ?, ?)",
-                            "期末考试安排", "2026年春季学期期末考试将于7月1日至7月10日进行，请同学们提前做好复习准备。", "2026-06-10 09:00:00");
-                    jdbcTemplate.update("INSERT INTO notice (title, content, publish_time) VALUES (?, ?, ?)",
-                            "校园网络维护通知", "本周六晚22:00至次日6:00进行校园网络升级维护，届时校园网将中断，请提前做好准备。", "2026-06-09 14:00:00");
-                    jdbcTemplate.update("INSERT INTO notice (title, content, publish_time) VALUES (?, ?, ?)",
-                            "图书馆暑期开放安排", "暑假期间图书馆开放时间调整为周一至周五 8:00-18:00，周末闭馆。", "2026-06-08 10:00:00");
-                    jdbcTemplate.update("INSERT INTO notice (title, content, publish_time) VALUES (?, ?, ?)",
-                            "奖学金评选结果公示", "2025-2026学年奖学金评选结果已公示在教务系统，如有异议请于6月20日前提交申诉。", "2026-06-07 16:00:00");
-                    jdbcTemplate.update("INSERT INTO notice (title, content, publish_time) VALUES (?, ?, ?)",
-                            "毕业生离校手续办理", "2026届毕业生请于6月25日前完成离校手续办理，包括归还图书、结算费用等。", "2026-06-05 08:30:00");
-                    log.info("已插入 5 条示例公告");
-                }
-
-                // -- 学生 --
-                Integer studentCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM student", Integer.class);
-                if (studentCount != null && studentCount == 0) {
-                    jdbcTemplate.update("INSERT INTO student (student_no, name, password, major, class_name, enrollment_year) VALUES (?, ?, ?, ?, ?, ?)",
-                            "2024001", "李同学", "654321", "计算机科学与技术", "计科2401", 2024);
-                    jdbcTemplate.update("INSERT INTO student (student_no, name, password, major, class_name, enrollment_year) VALUES (?, ?, ?, ?, ?, ?)",
-                            "2024002", "王同学", "123456", "计算机科学与技术", "计科2401", 2024);
-                    jdbcTemplate.update("INSERT INTO student (student_no, name, password, major, class_name, enrollment_year) VALUES (?, ?, ?, ?, ?, ?)",
-                            "2024003", "赵同学", "123456", "软件工程", "软工2401", 2024);
-                    log.info("已创建 3 名学生账号");
-                }
-
-                // -- 课程 --
-                Integer courseCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM course", Integer.class);
-                if (courseCount != null && courseCount == 0) {
-                    jdbcTemplate.update("INSERT INTO course (course_code, course_name, major, semester, credits, teacher, schedule_time, classroom) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                            "CS101", "数据结构与算法", "计算机科学与技术", "2025-2026-2", 4.0, "陈教授", "周一 8:00-10:00, 周三 10:00-12:00", "教学楼A301");
-                    jdbcTemplate.update("INSERT INTO course (course_code, course_name, major, semester, credits, teacher, schedule_time, classroom) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                            "CS102", "操作系统", "计算机科学与技术", "2025-2026-2", 3.5, "刘副教授", "周二 14:00-16:00, 周四 8:00-10:00", "教学楼A302");
-                    jdbcTemplate.update("INSERT INTO course (course_code, course_name, major, semester, credits, teacher, schedule_time, classroom) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                            "CS103", "数据库原理", "计算机科学与技术", "2025-2026-2", 3.0, "张教授", "周三 14:00-16:00, 周五 10:00-12:00", "实验楼B201");
-                    jdbcTemplate.update("INSERT INTO course (course_code, course_name, major, semester, credits, teacher, schedule_time, classroom) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                            "SE101", "软件工程概论", "软件工程", "2025-2026-2", 3.0, "王教授", "周一 10:00-12:00, 周四 14:00-16:00", "教学楼B101");
-                    jdbcTemplate.update("INSERT INTO course (course_code, course_name, major, semester, credits, teacher, schedule_time, classroom) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                            "SE102", "Java高级编程", "软件工程", "2025-2026-2", 4.0, "李副教授", "周二 8:00-10:00, 周五 14:00-16:00", "实验楼B202");
-                    // 通识课（两个专业都有）
-                    jdbcTemplate.update("INSERT INTO course (course_code, course_name, major, semester, credits, teacher, schedule_time, classroom) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                            "GE001", "大学英语(4)", "计算机科学与技术", "2025-2026-2", 2.0, "孙老师", "周五 8:00-10:00", "教学楼C201");
-                    jdbcTemplate.update("INSERT INTO course (course_code, course_name, major, semester, credits, teacher, schedule_time, classroom) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                            "GE001", "大学英语(4)", "软件工程", "2025-2026-2", 2.0, "孙老师", "周五 8:00-10:00", "教学楼C202");
-                    log.info("已创建 7 门课程");
-                }
-
-                // -- 成绩 --
-                Integer gradeCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM grade", Integer.class);
-                if (gradeCount != null && gradeCount == 0) {
-                    // 李同学 (id=1) 的成绩
-                    jdbcTemplate.update("INSERT INTO grade (student_id, course_id, score, grade_point, semester) VALUES (?, ?, ?, ?, ?)",
-                            1L, 1L, 92.0, 4.0, "2025-2026-2");
-                    jdbcTemplate.update("INSERT INTO grade (student_id, course_id, score, grade_point, semester) VALUES (?, ?, ?, ?, ?)",
-                            1L, 2L, 85.0, 3.3, "2025-2026-2");
-                    jdbcTemplate.update("INSERT INTO grade (student_id, course_id, score, grade_point, semester) VALUES (?, ?, ?, ?, ?)",
-                            1L, 3L, 78.0, 2.7, "2025-2026-2");
-                    jdbcTemplate.update("INSERT INTO grade (student_id, course_id, score, grade_point, semester) VALUES (?, ?, ?, ?, ?)",
-                            1L, 6L, 90.0, 3.7, "2025-2026-2");
-                    // 王同学 (id=2) 的成绩
-                    jdbcTemplate.update("INSERT INTO grade (student_id, course_id, score, grade_point, semester) VALUES (?, ?, ?, ?, ?)",
-                            2L, 1L, 88.0, 3.7, "2025-2026-2");
-                    jdbcTemplate.update("INSERT INTO grade (student_id, course_id, score, grade_point, semester) VALUES (?, ?, ?, ?, ?)",
-                            2L, 2L, 95.0, 4.0, "2025-2026-2");
-                    jdbcTemplate.update("INSERT INTO grade (student_id, course_id, score, grade_point, semester) VALUES (?, ?, ?, ?, ?)",
-                            2L, 3L, 82.0, 3.0, "2025-2026-2");
-                    // 赵同学 (id=3) 的成绩
-                    jdbcTemplate.update("INSERT INTO grade (student_id, course_id, score, grade_point, semester) VALUES (?, ?, ?, ?, ?)",
-                            3L, 4L, 91.0, 4.0, "2025-2026-2");
-                    jdbcTemplate.update("INSERT INTO grade (student_id, course_id, score, grade_point, semester) VALUES (?, ?, ?, ?, ?)",
-                            3L, 5L, 76.0, 2.3, "2025-2026-2");
-                    log.info("已创建 9 条成绩记录");
-                }
+                seedData(jdbcTemplate);
 
             } catch (Exception e) {
                 log.error("数据库初始化失败", e);
             }
         };
+    }
+
+    /**
+     * 幂等种子数据：先删后插，确保每次启动数据一致
+     */
+    private void seedData(JdbcTemplate jdbc) {
+        // -- 成绩（先删，因为依赖课程和学生）--
+        jdbc.update("DELETE FROM grade");
+        // -- 课程 --
+        jdbc.update("DELETE FROM course");
+        // -- 学生 --
+        jdbc.update("DELETE FROM student");
+        // -- 公告 --
+        jdbc.update("DELETE FROM notice");
+        // -- 聊天消息 --
+        jdbc.update("DELETE FROM chat_message");
+        // -- 聊天会话 --
+        jdbc.update("DELETE FROM chat_session");
+        // -- 用户 --
+        jdbc.update("DELETE FROM users");
+
+        // 重置自增序列
+        jdbc.update("ALTER SEQUENCE users_id_seq RESTART WITH 1");
+        jdbc.update("ALTER SEQUENCE notice_id_seq RESTART WITH 1");
+        jdbc.update("ALTER SEQUENCE student_id_seq RESTART WITH 1");
+        jdbc.update("ALTER SEQUENCE course_id_seq RESTART WITH 1");
+        jdbc.update("ALTER SEQUENCE grade_id_seq RESTART WITH 1");
+        jdbc.update("ALTER SEQUENCE chat_session_id_seq RESTART WITH 1");
+        jdbc.update("ALTER SEQUENCE chat_message_id_seq RESTART WITH 1");
+
+        // ---- 插入种子数据 ----
+
+        jdbc.update("INSERT INTO users (username, password, role, name) VALUES (?, ?, ?, ?)",
+                "laoshi", "123456", "teacher", "张老师");
+        jdbc.update("INSERT INTO users (username, password, role, name) VALUES (?, ?, ?, ?)",
+                "xuesheng", "654321", "student", "李同学");
+        log.info("已创建教师和学生账号");
+
+        jdbc.update("INSERT INTO notice (title, content, publish_time) VALUES (?, ?, CAST(? AS TIMESTAMP))",
+                "期末考试安排", "2026年春季学期期末考试将于7月1日至7月10日进行，请同学们提前做好复习准备。", "2026-06-10 09:00:00");
+        jdbc.update("INSERT INTO notice (title, content, publish_time) VALUES (?, ?, CAST(? AS TIMESTAMP))",
+                "校园网络维护通知", "本周六晚22:00至次日6:00进行校园网络升级维护，届时校园网将中断，请提前做好准备。", "2026-06-09 14:00:00");
+        jdbc.update("INSERT INTO notice (title, content, publish_time) VALUES (?, ?, CAST(? AS TIMESTAMP))",
+                "图书馆暑期开放安排", "暑假期间图书馆开放时间调整为周一至周五 8:00-18:00，周末闭馆。", "2026-06-08 10:00:00");
+        jdbc.update("INSERT INTO notice (title, content, publish_time) VALUES (?, ?, CAST(? AS TIMESTAMP))",
+                "奖学金评选结果公示", "2025-2026学年奖学金评选结果已公示在教务系统，如有异议请于6月20日前提交申诉。", "2026-06-07 16:00:00");
+        jdbc.update("INSERT INTO notice (title, content, publish_time) VALUES (?, ?, CAST(? AS TIMESTAMP))",
+                "毕业生离校手续办理", "2026届毕业生请于6月25日前完成离校手续办理，包括归还图书、结算费用等。", "2026-06-05 08:30:00");
+        log.info("已插入 5 条公告");
+
+        jdbc.update("INSERT INTO student (student_no, name, password, major, class_name, enrollment_year) VALUES (?, ?, ?, ?, ?, ?)",
+                "2024001", "李同学", "654321", "计算机科学与技术", "计科2401", 2024);
+        jdbc.update("INSERT INTO student (student_no, name, password, major, class_name, enrollment_year) VALUES (?, ?, ?, ?, ?, ?)",
+                "2024002", "王同学", "123456", "计算机科学与技术", "计科2401", 2024);
+        jdbc.update("INSERT INTO student (student_no, name, password, major, class_name, enrollment_year) VALUES (?, ?, ?, ?, ?, ?)",
+                "2024003", "赵同学", "123456", "软件工程", "软工2401", 2024);
+        log.info("已创建 3 名学生");
+
+        jdbc.update("INSERT INTO course (course_code, course_name, major, semester, credits, teacher, schedule_time, classroom) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "CS101", "数据结构与算法", "计算机科学与技术", "2025-2026-2", 4.0, "陈教授", "周一 8:00-10:00, 周三 10:00-12:00", "教学楼A301");
+        jdbc.update("INSERT INTO course (course_code, course_name, major, semester, credits, teacher, schedule_time, classroom) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "CS102", "操作系统", "计算机科学与技术", "2025-2026-2", 3.5, "刘副教授", "周二 14:00-16:00, 周四 8:00-10:00", "教学楼A302");
+        jdbc.update("INSERT INTO course (course_code, course_name, major, semester, credits, teacher, schedule_time, classroom) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "CS103", "数据库原理", "计算机科学与技术", "2025-2026-2", 3.0, "张教授", "周三 14:00-16:00, 周五 10:00-12:00", "实验楼B201");
+        jdbc.update("INSERT INTO course (course_code, course_name, major, semester, credits, teacher, schedule_time, classroom) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "SE101", "软件工程概论", "软件工程", "2025-2026-2", 3.0, "王教授", "周一 10:00-12:00, 周四 14:00-16:00", "教学楼B101");
+        jdbc.update("INSERT INTO course (course_code, course_name, major, semester, credits, teacher, schedule_time, classroom) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "SE102", "Java高级编程", "软件工程", "2025-2026-2", 4.0, "李副教授", "周二 8:00-10:00, 周五 14:00-16:00", "实验楼B202");
+        jdbc.update("INSERT INTO course (course_code, course_name, major, semester, credits, teacher, schedule_time, classroom) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "GE001", "大学英语(4)", "计算机科学与技术", "2025-2026-2", 2.0, "孙老师", "周五 8:00-10:00", "教学楼C201");
+        jdbc.update("INSERT INTO course (course_code, course_name, major, semester, credits, teacher, schedule_time, classroom) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "GE002", "大学英语(4)", "软件工程", "2025-2026-2", 2.0, "孙老师", "周五 8:00-10:00", "教学楼C202");
+        log.info("已创建 7 门课程");
+
+        // 成绩（用子查询匹配学号和课程编号，不依赖硬编码 ID）
+        jdbc.update("INSERT INTO grade (student_id, course_id, score, grade_point, semester) SELECT s.id, c.id, 92.0, 4.0, '2025-2026-2' FROM student s, course c WHERE s.student_no='2024001' AND c.course_code='CS101'");
+        jdbc.update("INSERT INTO grade (student_id, course_id, score, grade_point, semester) SELECT s.id, c.id, 85.0, 3.3, '2025-2026-2' FROM student s, course c WHERE s.student_no='2024001' AND c.course_code='CS102'");
+        jdbc.update("INSERT INTO grade (student_id, course_id, score, grade_point, semester) SELECT s.id, c.id, 78.0, 2.7, '2025-2026-2' FROM student s, course c WHERE s.student_no='2024001' AND c.course_code='CS103'");
+        jdbc.update("INSERT INTO grade (student_id, course_id, score, grade_point, semester) SELECT s.id, c.id, 90.0, 3.7, '2025-2026-2' FROM student s, course c WHERE s.student_no='2024001' AND c.course_code='GE001'");
+        jdbc.update("INSERT INTO grade (student_id, course_id, score, grade_point, semester) SELECT s.id, c.id, 88.0, 3.7, '2025-2026-2' FROM student s, course c WHERE s.student_no='2024002' AND c.course_code='CS101'");
+        jdbc.update("INSERT INTO grade (student_id, course_id, score, grade_point, semester) SELECT s.id, c.id, 95.0, 4.0, '2025-2026-2' FROM student s, course c WHERE s.student_no='2024002' AND c.course_code='CS102'");
+        jdbc.update("INSERT INTO grade (student_id, course_id, score, grade_point, semester) SELECT s.id, c.id, 82.0, 3.0, '2025-2026-2' FROM student s, course c WHERE s.student_no='2024002' AND c.course_code='CS103'");
+        jdbc.update("INSERT INTO grade (student_id, course_id, score, grade_point, semester) SELECT s.id, c.id, 91.0, 4.0, '2025-2026-2' FROM student s, course c WHERE s.student_no='2024003' AND c.course_code='SE101'");
+        jdbc.update("INSERT INTO grade (student_id, course_id, score, grade_point, semester) SELECT s.id, c.id, 76.0, 2.3, '2025-2026-2' FROM student s, course c WHERE s.student_no='2024003' AND c.course_code='SE102'");
+        log.info("已创建 9 条成绩");
     }
 }
