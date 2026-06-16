@@ -560,6 +560,9 @@
                                 <span class="sq-icon">📢</span><span class="sq-label">最近通知</span>
                                 <span class="red-dot" v-if="!isTeacher && unreadNoticeCount > 0"></span>
                             </div>
+                            <div class="submenu-grid-item" :class="{ active: activeMenu==='info' && activeSub==='schedule' }" @click="openInfoPage('schedule')">
+                                <span class="sq-icon">📅</span><span class="sq-label">课表查询</span>
+                            </div>
                             <div class="submenu-grid-item" :class="{ active: activeMenu==='info' && activeSub==='exam' }" @click="openInfoPage('exam')">
                                 <span class="sq-icon">📝</span><span class="sq-label">考试安排</span>
                             </div>
@@ -569,30 +572,13 @@
                             <div class="submenu-grid-item" :class="{ active: activeMenu==='info' && activeSub==='scholarship' }" @click="openInfoPage('scholarship')">
                                 <span class="sq-icon">🏆</span><span class="sq-label">奖学金</span>
                             </div>
-                            <div class="submenu-grid-item" :class="{ active: activeMenu==='info' && activeSub==='graduate' }" @click="openInfoPage('graduate')" style="grid-column:span 2;">
+                            <div class="submenu-grid-item" :class="{ active: activeMenu==='info' && activeSub==='graduate' }" @click="openInfoPage('graduate')">
                                 <span class="sq-icon">🎓</span><span class="sq-label">毕业手续</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 校园地图 -->
-                <div>
-                    <div class="nav-main-btn" :class="{ active: activeMenu === 'map' || mapExpanded }" @click="toggleMap">
-                        <span class="nav-icon">🗺️</span> 校园地图
-                        <span class="nav-arrow" :class="{ open: mapExpanded }">▶</span>
-                    </div>
-                    <div class="submenu-wrap" :class="{ open: mapExpanded }">
-                        <div class="submenu-list">
-                            <div class="submenu-list-item" :class="{ active: activeMenu==='map' && activeSub==='map2d' }" @click="openMapPage('map2d')">
-                                <span class="li-icon">🗺️</span> 2D 地图
-                            </div>
-                            <div class="submenu-list-item" :class="{ active: activeMenu==='map' && activeSub==='map3d' }" @click="openMapPage('map3d')">
-                                <span class="li-icon">🌐</span> 3D 全景
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </nav>
 
             <!-- ===== 右侧内容 ===== -->
@@ -658,12 +644,14 @@
                             </div>
                         </div>
                     </div>
-                    <!-- 快捷提问 -->
+                    <!-- 快捷提问 — 学生三按钮，教师只显示授课安排 -->
                     <div class="quick-chips" style="padding:6px 16px;display:flex;gap:8px;flex-wrap:wrap;">
-                        <span class="chip" @click="inputText='查看我的课表';send()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">📅 查看我的课表</span>
-                        <span class="chip" @click="inputText='查看我的成绩';send()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">📊 查看我的成绩</span>
-                        <span class="chip" @click="inputText='最近有什么通知';send()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">📢 最近通知</span>
-                        <span class="chip" v-if="isTeacher" @click="inputText='我这周有哪些课';send()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">🏫 我的授课安排</span>
+                        <template v-if="!isTeacher">
+                            <span class="chip" @click="viewSchedule()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">📅 查看我的课表</span>
+                            <span class="chip" @click="viewGrades()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">📊 查看我的成绩</span>
+                            <span class="chip" @click="inputText='最近有什么通知';send()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">📢 最近通知</span>
+                        </template>
+                        <span v-if="isTeacher" class="chip" @click="viewSchedule()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">🏫 我的授课安排</span>
                     </div>
                     <div class="input-area">
                         <input v-model="inputText" type="text" placeholder="输入你的问题..." @keydown.enter="send" :disabled="sending" ref="inputRef">
@@ -721,6 +709,51 @@
                             </div>
                         </div>
                         <div class="empty-state" v-else>📭 暂无公告</div>
+                    </div>
+
+                    <!-- 课表查询 -->
+                    <div v-if="activeSub === 'schedule'">
+                        <div class="static-info-card">
+                            <div class="info-icon">📅</div><h3>{{ isTeacher ? '我的授课安排' : '我的课表' }}</h3>
+                            <p v-if="scheduleLoading" style="color:var(--blue-light);">加载中...</p>
+                            <p v-else-if="!scheduleData" style="color:var(--text-light);">点击"加载课表"查看</p>
+                            <div v-else>
+                                <p style="font-size:13px;color:var(--blue-deep);margin-bottom:12px;">{{ scheduleData.name }} | {{ scheduleData.major || '' }}</p>
+                                <table class="info-table" style="width:100%;">
+                                    <tr style="background:var(--blue-pale);"><td>课程</td><td>教师</td><td>时间</td><td>教室</td><td v-if="!isTeacher">学分</td></tr>
+                                    <tr v-for="c in scheduleData.courses" :key="c.COURSE_NAME || c.course_name">
+                                        <td>{{ c.COURSE_NAME || c.course_name }}</td>
+                                        <td>{{ c.TEACHER || c.teacher || '-' }}</td>
+                                        <td>{{ c.SCHEDULE_DAY || c.schedule_day }} {{ c.SCHEDULE_TIME || c.schedule_time }}</td>
+                                        <td>{{ c.CLASSROOM || c.classroom }}</td>
+                                        <td v-if="!isTeacher">{{ c.CREDITS || c.credits }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <button class="modal-btn primary" style="margin-top:12px;" @click="loadSchedule" :disabled="scheduleLoading">{{ scheduleLoading ? '加载中...' : '加载课表' }}</button>
+                        </div>
+                    </div>
+
+                    <!-- 成绩查询（仅学生） -->
+                    <div v-if="activeSub === 'grades'">
+                        <div class="static-info-card">
+                            <div class="info-icon">📊</div><h3>我的成绩</h3>
+                            <p v-if="gradesLoading" style="color:var(--blue-light);">加载中...</p>
+                            <p v-else-if="!gradesData" style="color:var(--text-light);">点击按钮加载成绩</p>
+                            <div v-else>
+                                <p style="font-size:13px;color:var(--blue-deep);margin-bottom:12px;">{{ gradesData.name }} | GPA: {{ gradesData.gpa }}</p>
+                                <table class="info-table" style="width:100%;">
+                                    <tr style="background:var(--blue-pale);"><td>课程</td><td>成绩</td><td>绩点</td><td>学分</td></tr>
+                                    <tr v-for="g in gradesData.grades" :key="g.COURSE_NAME || g.course_name">
+                                        <td>{{ g.COURSE_NAME || g.course_name }}</td>
+                                        <td>{{ g.SCORE || g.score }}</td>
+                                        <td>{{ g.GRADE_POINT || g.grade_point }}</td>
+                                        <td>{{ g.CREDITS || g.credits }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <button class="modal-btn primary" style="margin-top:12px;" @click="loadGrades" :disabled="gradesLoading">{{ gradesLoading ? '加载中...' : '加载成绩' }}</button>
+                        </div>
                     </div>
 
                     <!-- 考试安排 -->
@@ -896,21 +929,6 @@
                 </div>
             </div>
 
-            <!-- 校园地图视图 -->
-            <div class="map-page" v-show="activeMenu === 'map'">
-                <div class="map-page-header">
-                    <button class="back-btn" @click="backToChat">←</button>
-                    <span class="page-title">{{ mapPageTitle }}</span>
-                </div>
-                <div class="map-page-body">
-                    <div v-if="activeSub === 'map2d'" class="map2d-gallery">
-                        <img src="map-1.jpg" alt="校园地图1" loading="lazy">
-                        <img src="map-2.jpg" alt="校园地图2" loading="lazy">
-                        <img src="map-3.jpg" alt="校园地图3" loading="lazy">
-                    </div>
-                    <iframe v-if="activeSub === 'map3d'" src="https://www.720yun.com/t/f0vksmfws2b" allowfullscreen></iframe>
-                </div>
-            </div>
         </div>
 
         <!-- Footer -->
@@ -973,6 +991,12 @@ createApp({
             editingNotice: null,
             noticeForm: { title: '', content: '' },
             savingNotice: false,
+            // 课表
+            scheduleData: null,
+            scheduleLoading: false,
+            // 成绩
+            gradesData: null,
+            gradesLoading: false,
         };
     },
     computed: {
@@ -988,7 +1012,7 @@ createApp({
             return this.notices.filter(n => !this.readNoticeIds.includes(n.ID || n.id)).length;
         },
         infoPageTitle() {
-            const t = { notice:'最近通知', exam:'考试安排', library:'图书馆', scholarship:'奖学金', graduate:'毕业手续' };
+            const t = { notice:'最近通知', schedule:'课表查询', grades:'成绩查询', exam:'考试安排', library:'图书馆', scholarship:'奖学金', graduate:'毕业手续' };
             return t[this.activeSub] || '信息查询';
         },
         mapPageTitle() {
@@ -1062,6 +1086,53 @@ createApp({
         openInfoPage(sub) {
             this.activeMenu = 'info'; this.activeSub = sub;
             if (sub === 'notice') this.loadNotices();
+            if (sub === 'schedule') this.loadSchedule();
+        },
+        // ===== 课表查询 =====
+        async loadSchedule() {
+            this.scheduleLoading = true; this.scheduleData = null;
+            const role = this.currentUser?.ROLE || this.currentUser?.role;
+            const no = this.currentUser?.TEACHER_NO || this.currentUser?.teacher_no
+                    || this.currentUser?.STUDENT_NO || this.currentUser?.student_no;
+            try {
+                const url = role === 'teacher'
+                    ? `/api/teacher/schedule?teacherNo=${encodeURIComponent(no)}`
+                    : `/api/student/courses?studentNo=${encodeURIComponent(no)}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.success) {
+                    this.scheduleData = data;
+                } else {
+                    alert(data.message || '查询失败');
+                }
+            } catch (e) {
+                alert('网络错误，无法加载课表');
+            }
+            this.scheduleLoading = false;
+        },
+        // 从聊天快捷方式查看课表
+        viewSchedule() {
+            this.openInfoPage('schedule');
+        },
+        // ===== 成绩查询 =====
+        async loadGrades() {
+            this.gradesLoading = true; this.gradesData = null;
+            const no = this.currentUser?.STUDENT_NO || this.currentUser?.student_no;
+            try {
+                const res = await fetch(`/api/student/grades?studentNo=${encodeURIComponent(no)}`);
+                const data = await res.json();
+                if (data.success) {
+                    this.gradesData = data;
+                } else {
+                    alert(data.message || '查询失败');
+                }
+            } catch (e) {
+                alert('网络错误，无法加载成绩');
+            }
+            this.gradesLoading = false;
+        },
+        viewGrades() {
+            this.openInfoPage('grades');
         },
         openMapPage(sub) { this.activeMenu = 'map'; this.activeSub = sub; },
         backToChat() {
