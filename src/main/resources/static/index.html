@@ -703,7 +703,10 @@
                                     <button class="notice-action-icon" @click.stop="openNoticeForm(n)" title="编辑">✎</button>
                                     <button class="notice-action-icon del" @click.stop="deleteNoticeItem(n)" title="删除">✕</button>
                                 </div>
-                                <div class="notice-title">{{ n.TITLE || n.title }}</div>
+                                <div class="notice-title">{{ n.TITLE || n.title }}
+                                    <span v-if="n.TARGET_CLASS || n.target_class" style="background:var(--blue-pale);color:var(--blue-deep);font-size:11px;padding:2px 8px;border-radius:10px;margin-left:8px;">📌 {{ n.TARGET_CLASS || n.target_class }}</span>
+                                    <span v-else style="background:#E8F5E9;color:#388E3C;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:8px;">📢 全校</span>
+                                </div>
                                 <div class="notice-content">{{ n.CONTENT || n.content }}</div>
                                 <div class="notice-time">{{ n.PUBLISH_TIME || n.publish_time }}</div>
                             </div>
@@ -943,6 +946,10 @@
             <h3>{{ editingNotice ? '编辑公告' : '发布新公告' }}</h3>
             <input v-model="noticeForm.title" placeholder="公告标题">
             <textarea v-model="noticeForm.content" placeholder="公告内容" rows="5"></textarea>
+            <select v-model="noticeForm.targetClass" style="width:100%;padding:10px 14px;border:2px solid var(--blue-pale);border-radius:12px;font-size:14px;margin-bottom:12px;background:#F8FBFE;">
+                <option value="">📢 全校通知（所有班级可见）</option>
+                <option v-for="c in classOptions" :value="c">📌 {{ c }}</option>
+            </select>
             <div class="form-btns">
                 <button class="modal-btn secondary" @click="showNoticeForm = false">取消</button>
                 <button class="modal-btn primary" @click="saveNotice" :disabled="savingNotice">
@@ -989,8 +996,9 @@ createApp({
             readNoticeIds: [],
             showNoticeForm: false,
             editingNotice: null,
-            noticeForm: { title: '', content: '' },
+            noticeForm: { title: '', content: '', targetClass: '' },
             savingNotice: false,
+            classOptions: ['物联网24级2班', '计算机科学24级1班', '法学25级1班'],
             // 课表
             scheduleData: null,
             scheduleLoading: false,
@@ -1145,7 +1153,10 @@ createApp({
         async loadNotices() {
             this.loadReadStatus();
             try {
-                const res = await fetch('/api/notices');
+                // 学生只看到自己班级的通知 + 全校通知
+                const cn = this.isTeacher ? '' : (this.currentUser?.class_name || '');
+                const url = cn ? `/api/notices?className=${encodeURIComponent(cn)}` : '/api/notices';
+                const res = await fetch(url);
                 const data = await res.json();
                 if (data.success) this.notices = data.notices;
             } catch (e) { console.error('加载公告失败', e); }
@@ -1183,15 +1194,15 @@ createApp({
         openNoticeForm(notice) {
             if (notice) {
                 this.editingNotice = notice;
-                this.noticeForm = { title: notice.TITLE || notice.title, content: notice.CONTENT || notice.content };
+                this.noticeForm = { title: notice.TITLE || notice.title, content: notice.CONTENT || notice.content, targetClass: notice.TARGET_CLASS || notice.target_class || '' };
             } else {
                 this.editingNotice = null;
-                this.noticeForm = { title: '', content: '' };
+                this.noticeForm = { title: '', content: '', targetClass: '' };
             }
             this.showNoticeForm = true;
         },
         async saveNotice() {
-            const { title, content } = this.noticeForm;
+            const { title, content, targetClass } = this.noticeForm;
             if (!title.trim() || !content.trim()) return;
             this.savingNotice = true;
             try {
@@ -1200,7 +1211,7 @@ createApp({
                 const res = await fetch(url, {
                     method: isEdit ? 'PUT' : 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title: title.trim(), content: content.trim() })
+                    body: JSON.stringify({ title: title.trim(), content: content.trim(), targetClass: targetClass || '' })
                 });
                 const data = await res.json();
                 if (data.success) {

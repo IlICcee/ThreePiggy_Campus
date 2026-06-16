@@ -173,14 +173,19 @@ public class ChatController {
 
     // ==================== 公告查询 ====================
     @GetMapping("/notices")
-    public Map<String, Object> getNotices() {
+    public Map<String, Object> getNotices(@RequestParam(required = false) String className) {
         Map<String, Object> result = new HashMap<>();
         try {
-            List<Map<String, Object>> notices = jdbcTemplate.queryForList(
-                "SELECT id, title, content, publish_time FROM notice ORDER BY publish_time DESC"
-            );
+            String sql;
+            if (className != null && !className.isEmpty()) {
+                sql = "SELECT id, title, content, target_class, publish_time FROM notice " +
+                      "WHERE target_class IS NULL OR target_class = ? ORDER BY publish_time DESC";
+                result.put("notices", jdbcTemplate.queryForList(sql, className));
+            } else {
+                sql = "SELECT id, title, content, target_class, publish_time FROM notice ORDER BY publish_time DESC";
+                result.put("notices", jdbcTemplate.queryForList(sql));
+            }
             result.put("success", true);
-            result.put("notices", notices);
         } catch (Exception e) {
             result.put("success", false);
             result.put("message", "公告查询失败: " + e.getMessage());
@@ -193,9 +198,11 @@ public class ChatController {
     public Map<String, Object> createNotice(@RequestBody Map<String, String> body) {
         Map<String, Object> result = new HashMap<>();
         try {
+            String targetClass = body.getOrDefault("targetClass", "");
+            if (targetClass.isBlank()) targetClass = null;
             jdbcTemplate.update(
-                "INSERT INTO notice (title, content, publish_time) VALUES (?, ?, ?)",
-                body.get("title"), body.get("content"), LocalDateTime.now()
+                "INSERT INTO notice (title, content, target_class, publish_time) VALUES (?, ?, ?, ?)",
+                body.get("title"), body.get("content"), targetClass, LocalDateTime.now()
             );
             result.put("success", true);
             result.put("message", "公告发布成功");
@@ -210,9 +217,11 @@ public class ChatController {
     public Map<String, Object> updateNotice(@PathVariable Long id, @RequestBody Map<String, String> body) {
         Map<String, Object> result = new HashMap<>();
         try {
+            String targetClass = body.getOrDefault("targetClass", "");
+            if (targetClass.isBlank()) targetClass = null;
             int rows = jdbcTemplate.update(
-                "UPDATE notice SET title = ?, content = ? WHERE id = ?",
-                body.get("title"), body.get("content"), id
+                "UPDATE notice SET title = ?, content = ?, target_class = ? WHERE id = ?",
+                body.get("title"), body.get("content"), targetClass, id
             );
             result.put("success", rows > 0);
             result.put("message", rows > 0 ? "公告更新成功" : "公告不存在");
