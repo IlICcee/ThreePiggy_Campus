@@ -173,16 +173,16 @@ public class ChatController {
 
     // ==================== 公告查询 ====================
     @GetMapping("/notices")
-    public Map<String, Object> getNotices(@RequestParam(required = false) String className) {
+    public Map<String, Object> getNotices(@RequestParam(required = false) String major) {
         Map<String, Object> result = new HashMap<>();
         try {
             String sql;
-            if (className != null && !className.isEmpty()) {
-                sql = "SELECT id, title, content, target_class, publish_time FROM notice " +
-                      "WHERE target_class IS NULL OR target_class = ? ORDER BY publish_time DESC";
-                result.put("notices", jdbcTemplate.queryForList(sql, className));
+            if (major != null && !major.isEmpty()) {
+                sql = "SELECT id, title, content, target_major, publish_time FROM notice " +
+                      "WHERE target_major IS NULL OR target_major = ? ORDER BY publish_time DESC";
+                result.put("notices", jdbcTemplate.queryForList(sql, major));
             } else {
-                sql = "SELECT id, title, content, target_class, publish_time FROM notice ORDER BY publish_time DESC";
+                sql = "SELECT id, title, content, target_major, publish_time FROM notice ORDER BY publish_time DESC";
                 result.put("notices", jdbcTemplate.queryForList(sql));
             }
             result.put("success", true);
@@ -198,11 +198,11 @@ public class ChatController {
     public Map<String, Object> createNotice(@RequestBody Map<String, String> body) {
         Map<String, Object> result = new HashMap<>();
         try {
-            String targetClass = body.getOrDefault("targetClass", "");
-            if (targetClass.isBlank()) targetClass = null;
+            String targetMajor = body.getOrDefault("targetMajor", "");
+            if (targetMajor.isBlank()) targetMajor = null;
             jdbcTemplate.update(
-                "INSERT INTO notice (title, content, target_class, publish_time) VALUES (?, ?, ?, ?)",
-                body.get("title"), body.get("content"), targetClass, LocalDateTime.now()
+                "INSERT INTO notice (title, content, target_major, publish_time) VALUES (?, ?, ?, ?)",
+                body.get("title"), body.get("content"), targetMajor, LocalDateTime.now()
             );
             result.put("success", true);
             result.put("message", "公告发布成功");
@@ -217,11 +217,11 @@ public class ChatController {
     public Map<String, Object> updateNotice(@PathVariable Long id, @RequestBody Map<String, String> body) {
         Map<String, Object> result = new HashMap<>();
         try {
-            String targetClass = body.getOrDefault("targetClass", "");
-            if (targetClass.isBlank()) targetClass = null;
+            String targetMajor = body.getOrDefault("targetMajor", "");
+            if (targetMajor.isBlank()) targetMajor = null;
             int rows = jdbcTemplate.update(
-                "UPDATE notice SET title = ?, content = ?, target_class = ? WHERE id = ?",
-                body.get("title"), body.get("content"), targetClass, id
+                "UPDATE notice SET title = ?, content = ?, target_major = ? WHERE id = ?",
+                body.get("title"), body.get("content"), targetMajor, id
             );
             result.put("success", rows > 0);
             result.put("message", rows > 0 ? "公告更新成功" : "公告不存在");

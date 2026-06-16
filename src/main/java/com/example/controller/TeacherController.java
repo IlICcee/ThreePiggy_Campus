@@ -18,19 +18,17 @@ public class TeacherController {
         this.jdbc = jdbc;
     }
 
-    // ==================== 教师授课班级 ====================
-    @GetMapping("/classes")
-    public Map<String, Object> classes(@RequestParam String teacherNo) {
+    // ==================== 教师授课专业 ====================
+    @GetMapping("/majors")
+    public Map<String, Object> majors(@RequestParam String teacherNo) {
         Map<String, Object> result = new HashMap<>();
         try {
-            // 查该教师所教课程覆盖的专业 → 对应班级名
             List<Map<String, Object>> list = jdbc.queryForList(
-                "SELECT DISTINCT s.class_name FROM course c " +
-                "JOIN student s ON c.major = s.major " +
+                "SELECT DISTINCT c.major FROM course c " +
                 "WHERE c.teacher_id = (SELECT id FROM teacher WHERE teacher_no = ?) " +
-                "ORDER BY s.class_name", teacherNo);
+                "ORDER BY c.major", teacherNo);
             result.put("success", true);
-            result.put("classes", list.stream().map(m -> m.get("class_name")).toList());
+            result.put("majors", list.stream().map(m -> m.get("major")).toList());
         } catch (Exception e) {
             result.put("success", false);
             result.put("message", "查询失败: " + e.getMessage());
