@@ -579,6 +579,12 @@
                                 <span class="sq-icon">🎓</span><span class="sq-label">毕业手续</span>
                             </div>
                         </div>
+                        <!-- 调课管理（仅教师） -->
+                        <div class="submenu-list" v-if="isTeacher">
+                            <div class="submenu-list-item" :class="{ active: activeMenu==='info' && activeSub==='adjust' }" @click="openInfoPage('adjust')">
+                                <span class="li-icon">🔄</span> 调课管理
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -933,6 +939,98 @@
                             <p style="margin-top:14px;color:var(--blue-light);font-size:12px;">* 办理时间：2026年6月15日 - 6月30日</p>
                         </div>
                     </div>
+
+                    <!-- 调课管理（仅教师） -->
+                    <div v-if="activeSub === 'adjust'">
+                        <div v-if="adjustStep === 'result'" class="static-info-card">
+                            <div class="info-icon">{{ adjustResultSuccess ? '✅' : '❌' }}</div>
+                            <h3>{{ adjustResultSuccess ? '调课成功！' : '调课失败' }}</h3>
+                            <p style="color:var(--text-light);line-height:1.8;white-space:pre-wrap;">{{ adjustResultMessage }}</p>
+                            <button class="modal-btn primary" style="margin-top:16px;" @click="resetAdjustment">
+                                {{ adjustResultSuccess ? '继续调课' : '重新操作' }}
+                            </button>
+                        </div>
+                        <div v-else>
+                            <div style="margin-bottom:20px;">
+                                <h3 style="font-size:15px;color:var(--blue-deep);margin-bottom:10px;">📋 选择要调整的课程</h3>
+                                <div v-if="adjustLoading" style="color:var(--blue-light);text-align:center;padding:12px;">加载中...</div>
+                                <div v-else-if="adjustCourses.length === 0" style="color:var(--text-light);text-align:center;padding:12px;">暂无课程数据</div>
+                                <div v-else class="notice-list">
+                                    <div class="notice-item" v-for="c in adjustCourses" :key="c.ID || c.id"
+                                         @click="selectCourseToAdjust(c)" style="cursor:pointer;"
+                                         :style="{ borderLeft: (selectedAdjustCourse && (selectedAdjustCourse.ID||selectedAdjustCourse.id) === (c.ID||c.id)) ? '3px solid var(--blue)' : '' }">
+                                        <div style="font-weight:600;color:var(--blue-deep);margin-bottom:4px;">
+                                            📖 《{{ c.COURSE_NAME || c.course_name }}》
+                                            <span style="background:var(--blue-pale);color:var(--blue-deep);font-size:11px;padding:2px 8px;border-radius:10px;margin-left:8px;">{{ c.MAJOR || c.major }}</span>
+                                        </div>
+                                        <div style="font-size:13px;color:var(--text-light);">
+                                            🕐 {{ c.SCHEDULE_DAY || c.schedule_day }} {{ c.SCHEDULE_TIME || c.schedule_time }}
+                                            📍 {{ c.CLASSROOM || c.classroom }}（{{ c.BUILDING || c.building }}）
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-if="selectedAdjustCourse" style="margin-bottom:20px;">
+                                <h3 style="font-size:15px;color:var(--blue-deep);margin-bottom:10px;">📝 调课原因</h3>
+                                <textarea v-model="adjustReason" placeholder="请输入调课原因..." rows="2"
+                                    style="width:100%;padding:10px 14px;border:2px solid var(--blue-pale);border-radius:12px;font-size:13px;outline:none;font-family:inherit;resize:vertical;background:#F8FBFE;"></textarea>
+                            </div>
+                            <div v-if="selectedAdjustCourse && adjustReason.trim()" style="margin-bottom:20px;">
+                                <h3 style="font-size:15px;color:var(--blue-deep);margin-bottom:10px;">📅 选择目标星期几</h3>
+                                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                    <span v-for="d in weekDays" :key="d" @click="selectTargetDay(d)"
+                                        :style="{cursor:'pointer',padding:'8px 16px',borderRadius:'12px',fontSize:'13px',fontWeight:'600',border:'2px solid '+(targetDay===d?'var(--blue)':'var(--blue-pale)'),background:targetDay===d?'var(--blue)':'var(--white)',color:targetDay===d?'#fff':'var(--blue-deep)',transition:'all 0.2s'}">
+                                        {{ d }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div v-if="targetDay" style="margin-bottom:20px;">
+                                <h3 style="font-size:15px;color:var(--blue-deep);margin-bottom:10px;">
+                                    🏫 可选时间和教室
+                                    <span style="font-size:12px;color:var(--text-light);font-weight:400;">
+                                        （原课：{{ (selectedAdjustCourse.SCHEDULE_DAY||selectedAdjustCourse.schedule_day) }} {{ (selectedAdjustCourse.SCHEDULE_TIME||selectedAdjustCourse.schedule_time) }}）
+                                    </span>
+                                </h3>
+                                <div v-if="adjustRoomsLoading" style="color:var(--blue-light);text-align:center;padding:12px;">正在查询可用教室...</div>
+                                <div v-else-if="availableSlotsByBuilding.length === 0" style="color:#E74C3C;text-align:center;padding:12px;">⚠️ 该天没有可用的教室</div>
+                                <div v-else>
+                                    <div v-for="bld in availableSlotsByBuilding" :key="bld.building"
+                                         style="margin-bottom:14px;border:2px solid var(--blue-pale);border-radius:14px;overflow:hidden;">
+                                        <div style="background:var(--blue-pale);padding:8px 14px;font-weight:700;color:var(--blue-deep);font-size:13px;">
+                                            🏢 {{ bld.building }}
+                                        </div>
+                                        <div style="padding:8px 14px;">
+                                            <div v-for="slot in bld.slots" :key="slot.name" style="margin-bottom:8px;">
+                                                <div @click="targetSlot = slot.name; targetRoom = ''"
+                                                     :style="{cursor:'pointer',padding:'6px 10px',borderRadius:'8px',fontSize:'12px',fontWeight:'600',marginBottom:'4px',background:targetSlot===slot.name?'var(--blue)':'#F8FBFE',color:targetSlot===slot.name?'#fff':'var(--blue-deep)',border:'1px solid '+(targetSlot===slot.name?'var(--blue)':'var(--blue-pale)')}">
+                                                    🕐 {{ slot.name }} — {{ slot.rooms.length }}间可用
+                                                </div>
+                                                <div v-if="targetSlot === slot.name" style="display:flex;flex-wrap:wrap;gap:6px;padding:4px 0 4px 8px;">
+                                                    <div v-for="r in slot.rooms" :key="r.code"
+                                                         @click="targetRoom = r.code"
+                                                         :style="{cursor:'pointer',padding:'6px 10px',borderRadius:'8px',fontSize:'12px',border:'2px solid '+(targetRoom===r.code?'var(--green)':'#e8e8e8'),background:targetRoom===r.code?'#E8F5E9':'#fff',transition:'all 0.2s'}">
+                                                        <div style="font-weight:600;">{{ r.code }} {{ r.room_no }}</div>
+                                                        <div style="font-size:11px;color:var(--text-light);">
+                                                            容量{{ r.capacity }}人
+                                                            <span v-if="r.has_ac" style="color:var(--green);">❄️</span><span v-else style="color:#E74C3C;">⚠️无空调</span>
+                                                            <span v-if="r.has_multimedia" style="color:var(--green);">📽️</span><span v-else style="color:#E74C3C;">⚠️无多媒体</span>
+                                                        </div>
+                                                        <div v-if="r.notes" style="font-size:10px;color:#E74C3C;">{{ r.notes }}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-if="targetRoom" style="text-align:center;margin-top:12px;">
+                                <button class="modal-btn primary" @click="submitAdjustment" :disabled="adjustSubmitting"
+                                    style="font-size:15px;padding:12px 40px;">
+                                    {{ adjustSubmitting ? '提交中...' : '✅ 确认调课' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1009,6 +1107,13 @@ createApp({
             // 成绩
             gradesData: null,
             gradesLoading: false,
+            // 调课管理
+            adjustStep: 'form', adjustCourses: [], adjustLoading: false,
+            selectedAdjustCourse: null, adjustReason: '', targetDay: '', targetSlot: '', targetRoom: '',
+            availableSlotsByBuilding: [], adjustRoomsLoading: false, adjustSubmitting: false,
+            adjustResultSuccess: false, adjustResultMessage: '',
+            weekDays: ['周一', '周二', '周三', '周四', '周五'],
+            timeSlots: ['1-2节', '3-4节', '5-6节', '7-8节'],
         };
     },
     computed: {
@@ -1024,7 +1129,7 @@ createApp({
             return this.notices.filter(n => !this.readNoticeIds.includes(n.ID || n.id)).length;
         },
         infoPageTitle() {
-            const t = { notice:'最近通知', schedule:'课表查询', grades:'成绩查询', exam:'考试安排', library:'图书馆', scholarship:'奖学金', graduate:'毕业手续' };
+            const t = { notice:'最近通知', schedule:'课表查询', grades:'成绩查询', exam:'考试安排', library:'图书馆', scholarship:'奖学金', graduate:'毕业手续', adjust:'调课管理' };
             return t[this.activeSub] || '信息查询';
         },
         mapPageTitle() {
@@ -1099,6 +1204,7 @@ createApp({
             this.activeMenu = 'info'; this.activeSub = sub;
             if (sub === 'notice') this.loadNotices();
             if (sub === 'schedule') this.loadSchedule();
+            if (sub === 'adjust') { this.resetAdjustment(); this.loadAdjustCourses(); }
         },
         // ===== 课表查询 =====
         async loadSchedule() {
@@ -1393,6 +1499,95 @@ createApp({
                 }
             } catch (e) { console.error('保存会话失败', e); }
         },
+        // ===== 调课管理 =====
+        async loadAdjustCourses() {
+            this.adjustLoading = true;
+            const tno = this.currentUser?.TEACHER_NO || this.currentUser?.teacher_no || '';
+            try {
+                const res = await fetch(`/api/teacher/courses-for-adjustment?teacherNo=${encodeURIComponent(tno)}`);
+                const data = await res.json();
+                if (data.success) { this.adjustCourses = data.courses || []; }
+                else { alert(data.message || '加载失败'); }
+            } catch (e) { alert('网络错误'); }
+            this.adjustLoading = false;
+        },
+        selectCourseToAdjust(c) {
+            this.selectedAdjustCourse = c; this.adjustReason = '';
+            this.targetDay = ''; this.targetSlot = ''; this.targetRoom = ''; this.availableSlotsByBuilding = [];
+        },
+        async selectTargetDay(day) {
+            this.targetDay = day; this.targetSlot = ''; this.targetRoom = ''; this.availableSlotsByBuilding = [];
+            if (!this.selectedAdjustCourse) return;
+            const major = this.selectedAdjustCourse.MAJOR || this.selectedAdjustCourse.major;
+            const origDay = this.selectedAdjustCourse.SCHEDULE_DAY || this.selectedAdjustCourse.schedule_day;
+            const origSlot = this.selectedAdjustCourse.SCHEDULE_TIME || this.selectedAdjustCourse.schedule_time;
+            this.adjustRoomsLoading = true;
+            try {
+                const results = [];
+                for (const slot of this.timeSlots) {
+                    if (day === origDay && slot === origSlot) continue;
+                    const cid = this.selectedAdjustCourse.ID || this.selectedAdjustCourse.id;
+                    const res = await fetch(`/api/teacher/available-rooms?major=${encodeURIComponent(major)}&targetDay=${encodeURIComponent(day)}&targetSlot=${encodeURIComponent(slot)}&courseId=${cid}`);
+                    const data = await res.json();
+                    if (data.success && data.availableRooms && data.availableRooms.length > 0) {
+                        results.push({ slot, rooms: data.availableRooms.map(r => ({
+                            code: r.CODE || r.code, room_no: r.ROOM_NO || r.room_no,
+                            building: r.BUILDING || r.building, capacity: r.CAPACITY || r.capacity,
+                            has_ac: r.HAS_AC != null ? r.HAS_AC : r.has_ac,
+                            has_multimedia: r.HAS_MULTIMEDIA != null ? r.HAS_MULTIMEDIA : r.has_multimedia,
+                            notes: r.NOTES || r.notes || ''
+                        })) });
+                    }
+                }
+                const buildingMap = {};
+                for (const r of results) {
+                    for (const room of r.rooms) {
+                        const bld = room.building;
+                        if (!buildingMap[bld]) buildingMap[bld] = {};
+                        if (!buildingMap[bld][r.slot]) buildingMap[bld][r.slot] = [];
+                        buildingMap[bld][r.slot].push(room);
+                    }
+                }
+                const grouped = [];
+                for (const [bld, slotMap] of Object.entries(buildingMap)) {
+                    const slots = [];
+                    for (const [sn, rooms] of Object.entries(slotMap)) {
+                        slots.push({ name: sn, rooms });
+                    }
+                    slots.sort((a,b) => this.timeSlots.indexOf(a.name) - this.timeSlots.indexOf(b.name));
+                    grouped.push({ building: bld, slots });
+                }
+                const bldOrder = ['至真楼', '明法楼', '博学楼'];
+                grouped.sort((a,b) => bldOrder.indexOf(a.building) - bldOrder.indexOf(b.building));
+                this.availableSlotsByBuilding = grouped;
+            } catch (e) { alert('网络错误'); }
+            this.adjustRoomsLoading = false;
+        },
+        async submitAdjustment() {
+            if (!this.targetRoom) { alert('请选择目标教室'); return; }
+            this.adjustSubmitting = true;
+            const tno = this.currentUser?.TEACHER_NO || this.currentUser?.teacher_no || '';
+            const cid = this.selectedAdjustCourse.ID || this.selectedAdjustCourse.id;
+            try {
+                const res = await fetch('/api/teacher/adjust-course', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ courseId: cid, teacherNo: tno, reason: this.adjustReason, targetDay: this.targetDay, targetSlot: this.targetSlot, targetRoom: this.targetRoom })
+                });
+                const data = await res.json();
+                this.adjustStep = 'result';
+                this.adjustResultSuccess = data.success;
+                this.adjustResultMessage = data.message || (data.success ? '调课成功' : '调课失败');
+            } catch (e) {
+                this.adjustStep = 'result'; this.adjustResultSuccess = false; this.adjustResultMessage = '网络错误，请重试';
+            }
+            this.adjustSubmitting = false;
+        },
+        resetAdjustment() {
+            this.adjustStep = 'form'; this.selectedAdjustCourse = null; this.adjustReason = '';
+            this.targetDay = ''; this.targetSlot = ''; this.targetRoom = ''; this.availableSlotsByBuilding = [];
+            this.adjustCourses = [];
+        },
+
         formatTime(ts) {
             if (!ts) return '';
             const d = new Date(ts);
