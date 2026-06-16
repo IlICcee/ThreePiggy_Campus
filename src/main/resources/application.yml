@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    # H2 内存数据库（开发调试）
+    url: jdbc:h2:mem:campus_ai;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    username: sa
+    password: 123456
+    driver-class-name: org.h2.Driver
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  ai:
+    dashscope:
+      api-key: ${DASHSCOPE_API_KEY:sk-ws-H.RELMPRD.qIUp.MEUCIAlj3GaxUfofMUcmijyT6KWkEcAgu-xI6geBhOYqM8rHAiEA-r3oRofnIOcirSuxsj01fQsmt1YUlAI8lhO-83W7Ylw}
+
+server:
+  port: 8088
