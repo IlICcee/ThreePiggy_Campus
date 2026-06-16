@@ -998,7 +998,7 @@ createApp({
             editingNotice: null,
             noticeForm: { title: '', content: '', targetClass: '' },
             savingNotice: false,
-            classOptions: ['物联网24级2班', '计算机科学24级1班', '法学25级1班'],
+            classOptions: [],
             // 课表
             scheduleData: null,
             scheduleLoading: false,
@@ -1191,7 +1191,16 @@ createApp({
             this.infoExpanded = false;
             this.mapExpanded = true;
         },
-        openNoticeForm(notice) {
+        async openNoticeForm(notice) {
+            // 教师打开发布窗时，加载自己授课的班级列表
+            if (this.isTeacher && this.classOptions.length === 0) {
+                try {
+                    const tno = this.currentUser?.teacher_no || '';
+                    const res = await fetch(`/api/teacher/classes?teacherNo=${tno}`);
+                    const data = await res.json();
+                    if (data.success) this.classOptions = data.classes || [];
+                } catch (e) { console.error('加载班级列表失败', e); }
+            }
             if (notice) {
                 this.editingNotice = notice;
                 this.noticeForm = { title: notice.TITLE || notice.title, content: notice.CONTENT || notice.content, targetClass: notice.TARGET_CLASS || notice.target_class || '' };
