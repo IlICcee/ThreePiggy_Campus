@@ -1,5 +1,6 @@
 package com.example.config;
 
+import com.example.service.DocumentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -14,7 +15,7 @@ public class DataInitializer {
     private static final String SEM = "2025-2026-2";
 
     @Bean
-    public CommandLineRunner initDatabase(JdbcTemplate jdbcTemplate) {
+    public CommandLineRunner initDatabase(JdbcTemplate jdbcTemplate, DocumentService documentService) {
         return args -> {
             try {
                 // 先删旧表
@@ -126,6 +127,14 @@ public class DataInitializer {
                 try { jdbcTemplate.update("DELETE FROM vector_store"); } catch (Exception ignored) {}
 
                 seedAll(jdbcTemplate);
+
+                // 启动时自动导入知识库
+                try {
+                    log.info("开始自动导入知识库文档...");
+                    documentService.importAllDocuments();
+                } catch (Exception e) {
+                    log.warn("知识库自动导入失败（可能向量库不可用）: {}", e.getMessage());
+                }
 
             } catch (Exception e) {
                 log.error("数据库初始化失败", e);
