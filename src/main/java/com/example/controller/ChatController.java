@@ -337,15 +337,25 @@ public class ChatController {
         StringBuilder sb = new StringBuilder();
         if ("teacher".equals(role)) {
             List<Map<String, Object>> courses = jdbcTemplate.queryForList(
-                "SELECT c.course_name, c.schedule_day, c.schedule_time, c.classroom, c.major " +
+                "SELECT c.course_name, c.schedule_day, c.schedule_time, c.start_time, c.classroom, c.major, " +
+                "r.has_ac, r.has_multimedia, r.notes " +
                 "FROM course c JOIN teacher t ON c.teacher_id = t.id " +
+                "LEFT JOIN classroom r ON c.classroom = r.code " +
                 "WHERE t.teacher_no = ? ORDER BY c.schedule_day, c.schedule_time", no);
             if (courses.isEmpty()) return "";
             sb.append("授课安排：\n");
             for (Map<String, Object> c : courses) {
                 sb.append("- ").append(c.get("schedule_day")).append(" ").append(c.get("schedule_time"))
-                  .append(" ").append(c.get("course_name")).append(" ").append(c.get("classroom"))
-                  .append("（").append(c.get("major")).append("）\n");
+                  .append("（").append(c.get("start_time")).append("）")
+                  .append(" ").append(c.get("course_name")).append(" @").append(c.get("classroom"));
+                // 教室设施提示
+                Boolean ac = (Boolean) c.get("has_ac");
+                Boolean mm = (Boolean) c.get("has_multimedia");
+                String notes = (String) c.get("notes");
+                if (ac != null && !ac) sb.append(" ⚠️无空调");
+                if (mm != null && !mm) sb.append(" ⚠️多媒体故障");
+                if (notes != null && !notes.isEmpty()) sb.append("（").append(notes).append("）");
+                sb.append("\n");
             }
         } else {
             List<Map<String, Object>> info = jdbcTemplate.queryForList(
@@ -358,15 +368,23 @@ public class ChatController {
 
             // -- 课表 --
             List<Map<String, Object>> schedule = jdbcTemplate.queryForList(
-                "SELECT c.course_name, t.name AS teacher, c.schedule_day, c.schedule_time, c.classroom, c.credits " +
+                "SELECT c.course_name, t.name AS teacher, c.schedule_day, c.schedule_time, c.start_time, " +
+                "c.classroom, c.credits, r.has_ac, r.has_multimedia, r.notes " +
                 "FROM course c LEFT JOIN teacher t ON c.teacher_id = t.id " +
+                "LEFT JOIN classroom r ON c.classroom = r.code " +
                 "WHERE c.major = ? ORDER BY c.schedule_day, c.schedule_time", major);
             if (!schedule.isEmpty()) {
                 sb.append("课表：\n");
                 for (Map<String, Object> c : schedule) {
                     sb.append("- ").append(c.get("schedule_day")).append(" ").append(c.get("schedule_time"))
-                      .append(" ").append(c.get("course_name")).append("（").append(c.get("teacher"))
-                      .append("）").append(c.get("classroom")).append("\n");
+                      .append("（").append(c.get("start_time")).append("）")
+                      .append(" ").append(c.get("course_name"))
+                      .append(" @").append(c.get("classroom"));
+                    Boolean ac = (Boolean) c.get("has_ac");
+                    Boolean mm = (Boolean) c.get("has_multimedia");
+                    if (ac != null && !ac) sb.append(" ⚠️无空调");
+                    if (mm != null && !mm) sb.append(" ⚠️多媒体故障");
+                    sb.append("（").append(c.get("teacher")).append("）\n");
                 }
             }
 
