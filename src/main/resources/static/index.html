@@ -43,18 +43,42 @@
         /* ── 登录遮罩 ── */
         .login-overlay {
             position: fixed; inset:0; z-index:100;
-            background: rgba(44,95,158,0.3); backdrop-filter: blur(8px);
+            background: linear-gradient(180deg, #C9E4F2 0%, #A8D4EA 15%, #D6ECFA 35%, #E8F4FD 55%, #B8D8E8 75%, #C5DCE8 100%);
+            backdrop-filter: blur(3px);
             display:flex; align-items:center; justify-content:center;
+            overflow:hidden;
         }
+        /* 校园场景背景 */
+        .campus-scene-bg {
+            position:absolute; inset:0; pointer-events:none; z-index:0;
+            display:flex; align-items:flex-end; justify-content:center;
+            opacity:0.35;
+        }
+        .campus-scene-bg svg { width:100%; height:100%; }
         .login-card {
-            background: var(--white); border-radius:24px; padding:40px 36px;
-            width:380px; max-width:92vw; box-shadow: 0 20px 60px rgba(44,95,158,0.25);
+            background: var(--white); border-radius:24px; padding:0; width:380px;
+            max-width:92vw; box-shadow: 0 20px 60px rgba(44,95,158,0.25);
             text-align:center; animation: fadeInUp 0.5s cubic-bezier(.34,1.56,.64,1);
+            overflow:hidden; position:relative; z-index:1;
         }
+        /* 卡片顶部蓝白装饰条 — 柔和过渡 */
+        .login-card-top {
+            background: linear-gradient(180deg, #F5F9FC 0%, #FFFFFF 100%);
+            padding:24px 36px 8px;
+            position:relative;
+            border-bottom:2px solid var(--blue-pale);
+        }
+        .login-card-top::after {
+            content:''; position:absolute; bottom:-1px; left:20%; right:20%; height:2px;
+            background:linear-gradient(90deg, transparent, #C8E0F4, transparent);
+            border-radius:50%;
+        }
+        .login-card-body { padding:16px 36px 32px; }
         @keyframes fadeInUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
-        .login-card .login-logo { font-size:52px; display:block; margin-bottom:8px; }
+        .login-card .login-logo-img { width:56px; height:56px; border-radius:50%; object-fit:cover; display:block; margin:0 auto 8px; box-shadow:0 3px 14px rgba(255,183,77,0.3); }
+        .login-card .login-welcome { font-size:11px; color:var(--blue); letter-spacing:4px; text-transform:uppercase; margin-bottom:2px; }
         .login-card h2 { font-size:20px; color:var(--blue-deep); margin-bottom:4px; }
-        .login-card .login-sub { font-size:12px; color:var(--blue-light); margin-bottom:24px; letter-spacing:2px; }
+        .login-card .login-sub { font-size:12px; color:var(--blue-light); margin-bottom:20px; letter-spacing:2px; }
         .login-card input {
             width:100%; padding:12px 16px; margin-bottom:12px;
             border:2px solid var(--blue-pale); border-radius:14px; font-size:14px;
@@ -160,8 +184,7 @@
         .welcome-avatar { font-size:46px; display:block; margin-bottom:6px; text-shadow:0 2px 8px rgba(255,255,255,0.8); }
         .welcome-card h2 { font-size:17px; color:var(--blue-deep); margin-bottom:4px; text-shadow:0 1px 4px rgba(255,255,255,0.7); }
         .welcome-card p { font-size:13px; color:var(--text-light); line-height:1.6; text-shadow:0 1px 4px rgba(255,255,255,0.6); }
-        .pigs-logo { position:absolute; bottom:8px; right:12px; z-index:1; opacity:0.6; transition:opacity 0.3s; }
-        .welcome-card:hover .pigs-logo { opacity:0.85; }
+        .welcome-card:hover .brand-logo { opacity:0.85; }
 
         /* 聊天卡片 */
         .chat-card {
@@ -348,6 +371,16 @@
         .map-placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--text-light); background:#F8FBFE; }
         .map-placeholder .ph-icon { font-size:56px; margin-bottom:14px; }
         .map-placeholder .ph-text { font-size:14px; }
+        .map2d-gallery { display:flex; flex-direction:column; gap:16px; height:100%; overflow-y:auto; padding:16px; }
+        .map2d-gallery img { width:100%; border-radius:14px; box-shadow:0 4px 16px rgba(0,0,0,0.1); cursor:pointer; transition:transform 0.3s; }
+        .map2d-gallery img:hover { transform:scale(1.02); }
+        /* 侧边装饰背景 */
+        .info-card-bg { position:relative; overflow:hidden; }
+        .info-card-bg .bg-left, .info-card-bg .bg-right { position:absolute; top:0; bottom:0; pointer-events:none; z-index:0; opacity:0.55; display:flex; align-items:center; }
+        .info-card-bg .bg-left { left:8px; }
+        .info-card-bg .bg-right { right:8px; }
+        .info-card-bg .bg-left svg, .info-card-bg .bg-right svg { height:80%; }
+        .info-card-bg > * { position:relative; z-index:1; }
         .empty-state { text-align:center; padding:40px 20px; color:var(--text-light); }
 
         .brand-footer { text-align:center; padding:18px 0 12px; font-size:12px; color:var(--blue-light); letter-spacing:1px; }
@@ -401,19 +434,92 @@
 <div id="app">
     <!-- ========== 登录界面 ========== -->
     <div class="login-overlay" v-if="!isLoggedIn">
+        <!-- 校园场景背景 -->
+        <div class="campus-scene-bg">
+            <svg viewBox="0 0 900 500" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#B8DBF0"/><stop offset="60%" stop-color="#D8ECF8"/><stop offset="100%" stop-color="#EAF4FA"/></linearGradient>
+                    <linearGradient id="groundGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#C5DCC5"/><stop offset="100%" stop-color="#A8C8A0"/></linearGradient>
+                </defs>
+                <rect width="900" height="500" fill="url(#sky)"/>
+                <!-- 云 -->
+                <ellipse cx="150" cy="60" rx="50" ry="16" fill="white" opacity="0.6"/><ellipse cx="170" cy="54" rx="30" ry="11" fill="white" opacity="0.5"/>
+                <ellipse cx="620" cy="45" rx="45" ry="14" fill="white" opacity="0.5"/><ellipse cx="640" cy="39" rx="28" ry="10" fill="white" opacity="0.4"/>
+                <ellipse cx="380" cy="75" rx="35" ry="10" fill="white" opacity="0.4"/>
+                <!-- 远山 -->
+                <path d="M0 270 Q120 200 250 260 Q380 210 500 265 Q620 220 750 260 Q820 240 900 270 L900 350 L0 350Z" fill="#B8CCB8" opacity="0.5"/>
+                <!-- 地面 -->
+                <rect x="0" y="350" width="900" height="150" fill="url(#groundGrad)" opacity="0.7"/>
+                <!-- 道路 -->
+                <rect x="0" y="380" width="900" height="18" fill="#C8D4C0" opacity="0.6"/>
+                <!-- === 教学楼1（左侧大） === -->
+                <rect x="60" y="200" width="140" height="180" fill="#D0DAE8" rx="2"/><rect x="60" y="195" width="140" height="10" fill="#BCC8D8" rx="2"/>
+                <rect x="68" y="210" width="24" height="32" fill="#A8C0D8" rx="1"/><rect x="100" y="210" width="24" height="32" fill="#A8C0D8" rx="1"/><rect x="132" y="210" width="24" height="32" fill="#A8C0D8" rx="1"/>
+                <rect x="68" y="252" width="24" height="32" fill="#A8C0D8" rx="1"/><rect x="100" y="252" width="24" height="32" fill="#A8C0D8" rx="1"/><rect x="132" y="252" width="24" height="32" fill="#A8C0D8" rx="1"/>
+                <rect x="68" y="294" width="24" height="32" fill="#A8C0D8" rx="1"/><rect x="100" y="294" width="24" height="32" fill="#A8C0D8" rx="1"/><rect x="132" y="294" width="24" height="32" fill="#A8C0D8" rx="1"/>
+                <rect x="60" y="340" width="140" height="42" fill="#C0CCDD" rx="2"/><rect x="100" y="345" width="55" height="32" fill="#A0B8D0" rx="2"/>
+                <!-- 教学楼顶部文字 -->
+                <text x="130" y="202" text-anchor="middle" fill="#7A8FA8" font-size="7" font-weight="600">教学楼</text>
+                <!-- 旗杆 -->
+                <rect x="200" y="150" width="2" height="232" fill="#B8C0C8"/><rect x="196" y="150" width="16" height="10" fill="#E85050" rx="1"/>
+
+                <!-- === 图书馆（中间） === -->
+                <rect x="340" y="180" width="180" height="202" fill="#D4DCE8" rx="3"/><rect x="340" y="175" width="180" height="10" fill="#C0CCDA" rx="3"/>
+                <rect x="350" y="195" width="30" height="28" fill="#A8BCD0" rx="1"/><rect x="388" y="195" width="30" height="28" fill="#A8BCD0" rx="1"/><rect x="426" y="195" width="30" height="28" fill="#A8BCD0" rx="1"/><rect x="464" y="195" width="30" height="28" fill="#A8BCD0" rx="1"/>
+                <rect x="350" y="233" width="30" height="28" fill="#A8BCD0" rx="1"/><rect x="388" y="233" width="30" height="28" fill="#A8BCD0" rx="1"/><rect x="426" y="233" width="30" height="28" fill="#A8BCD0" rx="1"/><rect x="464" y="233" width="30" height="28" fill="#A8BCD0" rx="1"/>
+                <rect x="350" y="271" width="68" height="28" fill="#A8BCD0" rx="1"/><rect x="426" y="271" width="68" height="28" fill="#A8BCD0" rx="1"/>
+                <rect x="340" y="342" width="180" height="42" fill="#C4D0E0" rx="2"/><rect x="380" y="348" width="100" height="30" fill="#A4B8D0" rx="2"/>
+                <text x="430" y="182" text-anchor="middle" fill="#7A8FA8" font-size="7" font-weight="600">图书馆</text>
+                <!-- 图书馆圆顶 -->
+                <path d="M370 175 Q430 130 490 175Z" fill="#D8DDE8" opacity="0.8"/>
+
+                <!-- === 食堂（右侧） === -->
+                <rect x="620" y="240" width="160" height="142" fill="#E0D8D0" rx="3"/><rect x="620" y="235" width="160" height="10" fill="#D0C8C0" rx="3"/>
+                <rect x="630" y="252" width="35" height="28" fill="#C8BBA8" rx="1"/><rect x="673" y="252" width="35" height="28" fill="#C8BBA8" rx="1"/><rect x="716" y="252" width="35" height="28" fill="#C8BBA8" rx="1"/>
+                <rect x="630" y="290" width="35" height="28" fill="#C8BBA8" rx="1"/><rect x="673" y="290" width="35" height="28" fill="#C8BBA8" rx="1"/><rect x="716" y="290" width="35" height="28" fill="#C8BBA8" rx="1"/>
+                <rect x="620" y="342" width="160" height="42" fill="#D4CCC4" rx="2"/><rect x="670" y="348" width="60" height="30" fill="#C0B4A4" rx="2"/>
+                <text x="700" y="242" text-anchor="middle" fill="#9A8E80" font-size="7" font-weight="600">食堂</text>
+                <!-- 烟囱 -->
+                <rect x="720" y="210" width="12" height="28" fill="#D0C8C0" rx="1"/><ellipse cx="726" cy="208" rx="8" ry="4" fill="#E8E4DC" opacity="0.7"/>
+
+                <!-- === 操场（右侧远处） === -->
+                <rect x="620" y="355" width="180" height="45" fill="#D4E0D0" opacity="0.7" rx="3"/>
+                <ellipse cx="710" cy="377" rx="65" ry="18" fill="none" stroke="#C0CCA0" stroke-width="2" opacity="0.6"/>
+                <line x1="710" y1="360" x2="710" y2="395" stroke="#C0CCA0" stroke-width="1" opacity="0.4"/>
+
+                <!-- 树木 -->
+                <circle cx="290" cy="340" r="20" fill="#A8C8A0" opacity="0.6"/><rect x="287" y="358" width="6" height="20" fill="#B0A888" rx="1"/>
+                <circle cx="580" cy="345" r="16" fill="#A8C8A0" opacity="0.5"/><rect x="577" y="360" width="6" height="18" fill="#B0A888" rx="1"/>
+                <circle cx="30" cy="338" r="14" fill="#A0C098" opacity="0.5"/><rect x="27" y="352" width="5" height="16" fill="#B0A888" rx="1"/>
+                <circle cx="810" cy="350" r="18" fill="#A8C8A0" opacity="0.5"/><rect x="807" y="366" width="6" height="16" fill="#B0A888" rx="1"/>
+                <circle cx="850" cy="348" r="12" fill="#B0C8A8" opacity="0.4"/>
+
+                <!-- 人物小点 -->
+                <circle cx="260" cy="385" r="3" fill="#8898A8" opacity="0.5"/><circle cx="275" cy="387" r="2.5" fill="#8898A8" opacity="0.4"/>
+                <circle cx="540" cy="386" r="3" fill="#8898A8" opacity="0.5"/><circle cx="555" cy="384" r="2.5" fill="#8898A8" opacity="0.4"/>
+                <circle cx="780" cy="388" r="3" fill="#8898A8" opacity="0.5"/><circle cx="795" cy="386" r="2.5" fill="#8898A8" opacity="0.4"/>
+            </svg>
+        </div>
+
         <div class="login-card">
-            <span class="login-logo">🐷</span>
-            <h2>FJUT · 校园助手</h2>
-            <p class="login-sub">福建理工大学</p>
-            <input v-model="loginForm.username" type="text" placeholder="教师号 / 学号" @keydown.enter="doLogin">
-            <input v-model="loginForm.password" type="password" placeholder="密码" @keydown.enter="doLogin">
-            <button class="login-btn" @click="doLogin" :disabled="loggingIn">
-                {{ loggingIn ? '登录中...' : '登 录' }}
-            </button>
-            <p class="login-error" v-if="loginError">{{ loginError }}</p>
-            <p class="login-hint">
-                教师测试：1202001 / 123456<br>学生测试：325010101 / 123456
-            </p>
+            <!-- 蓝白装饰顶部 -->
+            <div class="login-card-top">
+                <p class="login-welcome">WELCOME</p>
+                <img class="login-logo-img" src="logo-pig.jpg" alt="Logo">
+                <h2>FJUT · 校园助手</h2>
+                <p class="login-sub">福建理工大学</p>
+            </div>
+            <div class="login-card-body">
+                <input v-model="loginForm.username" type="text" placeholder="教师号 / 学号" @keydown.enter="doLogin">
+                <input v-model="loginForm.password" type="password" placeholder="密码" @keydown.enter="doLogin">
+                <button class="login-btn" @click="doLogin" :disabled="loggingIn">
+                    {{ loggingIn ? '登录中...' : '登 录' }}
+                </button>
+                <p class="login-error" v-if="loginError">{{ loginError }}</p>
+                <p class="login-hint">
+                    教师测试：1202001 / 123456<br>学生测试：325010101 / 123456
+                </p>
+            </div>
         </div>
     </div>
 
@@ -454,6 +560,9 @@
                                 <span class="sq-icon">📢</span><span class="sq-label">最近通知</span>
                                 <span class="red-dot" v-if="!isTeacher && unreadNoticeCount > 0"></span>
                             </div>
+                            <div class="submenu-grid-item" :class="{ active: activeMenu==='info' && activeSub==='schedule' }" @click="openInfoPage('schedule')">
+                                <span class="sq-icon">📅</span><span class="sq-label">课表查询</span>
+                            </div>
                             <div class="submenu-grid-item" :class="{ active: activeMenu==='info' && activeSub==='exam' }" @click="openInfoPage('exam')">
                                 <span class="sq-icon">📝</span><span class="sq-label">考试安排</span>
                             </div>
@@ -463,30 +572,13 @@
                             <div class="submenu-grid-item" :class="{ active: activeMenu==='info' && activeSub==='scholarship' }" @click="openInfoPage('scholarship')">
                                 <span class="sq-icon">🏆</span><span class="sq-label">奖学金</span>
                             </div>
-                            <div class="submenu-grid-item" :class="{ active: activeMenu==='info' && activeSub==='graduate' }" @click="openInfoPage('graduate')" style="grid-column:span 2;">
+                            <div class="submenu-grid-item" :class="{ active: activeMenu==='info' && activeSub==='graduate' }" @click="openInfoPage('graduate')">
                                 <span class="sq-icon">🎓</span><span class="sq-label">毕业手续</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 校园地图 -->
-                <div>
-                    <div class="nav-main-btn" :class="{ active: activeMenu === 'map' || mapExpanded }" @click="toggleMap">
-                        <span class="nav-icon">🗺️</span> 校园地图
-                        <span class="nav-arrow" :class="{ open: mapExpanded }">▶</span>
-                    </div>
-                    <div class="submenu-wrap" :class="{ open: mapExpanded }">
-                        <div class="submenu-list">
-                            <div class="submenu-list-item" :class="{ active: activeMenu==='map' && activeSub==='map2d' }" @click="openMapPage('map2d')">
-                                <span class="li-icon">🗺️</span> 2D 地图
-                            </div>
-                            <div class="submenu-list-item" :class="{ active: activeMenu==='map' && activeSub==='map3d' }" @click="openMapPage('map3d')">
-                                <span class="li-icon">🌐</span> 3D 全景
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </nav>
 
             <!-- ===== 右侧内容 ===== -->
@@ -520,13 +612,8 @@
                         <line x1="450" y1="92" x2="450" y2="162" stroke="#CCC4A8" stroke-width="1" opacity="0.5"/>
                         <line x1="450" y1="98" x2="450" y2="156" stroke="#D4CCA8" stroke-width="1" opacity="0.4"/>
                     </svg>
-                    <svg class="pigs-logo" viewBox="0 0 220 70" width="130" height="42">
-                        <g transform="translate(5,0)"><circle cx="30" cy="33" r="21" fill="#FFDCE3" stroke="#F0B8C0" stroke-width="1.2"/><circle cx="22" cy="30" r="2.8" fill="#3A3A4A"/><circle cx="38" cy="30" r="2.8" fill="#3A3A4A"/><ellipse cx="30" cy="40" rx="5" ry="3.5" fill="#F8A5B2"/><circle cx="28" cy="39.5" r="1" fill="#FF8A95"/><circle cx="32" cy="39.5" r="1" fill="#FF8A95"/></g>
-                        <g transform="translate(78,2)"><circle cx="30" cy="32" r="20" fill="#FFDCE3" stroke="#F0B8C0" stroke-width="1.2"/><circle cx="22" cy="29" r="2.6" fill="#3A3A4A"/><circle cx="38" cy="29" r="2.6" fill="#3A3A4A"/><ellipse cx="30" cy="38" rx="5" ry="3.5" fill="#F8A5B2"/><circle cx="28" cy="37.5" r="1" fill="#FF8A95"/><circle cx="32" cy="37.5" r="1" fill="#FF8A95"/></g>
-                        <g transform="translate(150,0)"><circle cx="30" cy="33" r="21" fill="#FFDCE3" stroke="#F0B8C0" stroke-width="1.2"/><path d="M20 28 Q24 25 27 28" stroke="#3A3A4A" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M33 28 Q36 25 40 28" stroke="#3A3A4A" stroke-width="2" fill="none" stroke-linecap="round"/><ellipse cx="30" cy="38" rx="5" ry="3.5" fill="#F8A5B2"/></g>
-                    </svg>
                     <div class="content-wrap">
-                        <span class="welcome-avatar">🤖</span>
+                        <img class="welcome-avatar-img" src="logo-pig.jpg" alt="校园助手Logo" style="width:52px; height:52px; border-radius:50%; object-fit:cover; margin-bottom:6px; box-shadow:0 3px 12px rgba(255,183,77,0.3);">
                         <h2>你好！我是你的校园 AI 助手</h2>
                         <p>点击左侧菜单探索功能～✨</p>
                     </div>
@@ -545,7 +632,8 @@
                     </div>
                     <div class="chat-messages" ref="msgContainer">
                         <div v-for="(msg, i) in messages" :key="i" :class="['msg-row', msg.role]">
-                            <div class="msg-avatar">{{ msg.role === 'ai' ? '🤖' : '😊' }}</div>
+                            <img v-if="msg.role === 'user'" class="msg-avatar-img" src="logo-pig.jpg" style="width:34px;height:34px;border-radius:50%;object-fit:cover;">
+                            <div v-else class="msg-avatar">🤖</div>
                             <div class="msg-bubble">
                                 {{ msg.content }}
                                 <span v-if="msg.loading" class="loading-dots"><span></span><span></span><span></span></span>
@@ -556,12 +644,14 @@
                             </div>
                         </div>
                     </div>
-                    <!-- 快捷提问 -->
+                    <!-- 快捷提问 — 学生三按钮，教师只显示授课安排 -->
                     <div class="quick-chips" style="padding:6px 16px;display:flex;gap:8px;flex-wrap:wrap;">
-                        <span class="chip" @click="inputText='查看我的课表';send()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">📅 查看我的课表</span>
-                        <span class="chip" @click="inputText='查看我的成绩';send()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">📊 查看我的成绩</span>
-                        <span class="chip" @click="inputText='最近有什么通知';send()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">📢 最近通知</span>
-                        <span class="chip" v-if="isTeacher" @click="inputText='我这周有哪些课';send()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">🏫 我的授课安排</span>
+                        <template v-if="!isTeacher">
+                            <span class="chip" @click="viewSchedule()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">📅 查看我的课表</span>
+                            <span class="chip" @click="viewGrades()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">📊 查看我的成绩</span>
+                            <span class="chip" @click="inputText='最近有什么通知';send()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">📢 最近通知</span>
+                        </template>
+                        <span v-if="isTeacher" class="chip" @click="viewSchedule()" style="cursor:pointer;background:var(--blue-pale);color:var(--blue-deep);padding:4px 12px;border-radius:14px;font-size:12px;white-space:nowrap;">🏫 我的授课安排</span>
                     </div>
                     <div class="input-area">
                         <input v-model="inputText" type="text" placeholder="输入你的问题..." @keydown.enter="send" :disabled="sending" ref="inputRef">
@@ -621,9 +711,70 @@
                         <div class="empty-state" v-else>📭 暂无公告</div>
                     </div>
 
+                    <!-- 课表查询 -->
+                    <div v-if="activeSub === 'schedule'">
+                        <div class="static-info-card">
+                            <div class="info-icon">📅</div><h3>{{ isTeacher ? '我的授课安排' : '我的课表' }}</h3>
+                            <p v-if="scheduleLoading" style="color:var(--blue-light);">加载中...</p>
+                            <p v-else-if="!scheduleData" style="color:var(--text-light);">点击"加载课表"查看</p>
+                            <div v-else>
+                                <p style="font-size:13px;color:var(--blue-deep);margin-bottom:12px;">{{ scheduleData.name }} | {{ scheduleData.major || '' }}</p>
+                                <table class="info-table" style="width:100%;">
+                                    <tr style="background:var(--blue-pale);"><td>课程</td><td>教师</td><td>时间</td><td>教室</td><td v-if="!isTeacher">学分</td></tr>
+                                    <tr v-for="c in scheduleData.courses" :key="c.COURSE_NAME || c.course_name">
+                                        <td>{{ c.COURSE_NAME || c.course_name }}</td>
+                                        <td>{{ c.TEACHER || c.teacher || '-' }}</td>
+                                        <td>{{ c.SCHEDULE_DAY || c.schedule_day }} {{ c.SCHEDULE_TIME || c.schedule_time }}</td>
+                                        <td>{{ c.CLASSROOM || c.classroom }}</td>
+                                        <td v-if="!isTeacher">{{ c.CREDITS || c.credits }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <button class="modal-btn primary" style="margin-top:12px;" @click="loadSchedule" :disabled="scheduleLoading">{{ scheduleLoading ? '加载中...' : '加载课表' }}</button>
+                        </div>
+                    </div>
+
+                    <!-- 成绩查询（仅学生） -->
+                    <div v-if="activeSub === 'grades'">
+                        <div class="static-info-card">
+                            <div class="info-icon">📊</div><h3>我的成绩</h3>
+                            <p v-if="gradesLoading" style="color:var(--blue-light);">加载中...</p>
+                            <p v-else-if="!gradesData" style="color:var(--text-light);">点击按钮加载成绩</p>
+                            <div v-else>
+                                <p style="font-size:13px;color:var(--blue-deep);margin-bottom:12px;">{{ gradesData.name }} | GPA: {{ gradesData.gpa }}</p>
+                                <table class="info-table" style="width:100%;">
+                                    <tr style="background:var(--blue-pale);"><td>课程</td><td>成绩</td><td>绩点</td><td>学分</td></tr>
+                                    <tr v-for="g in gradesData.grades" :key="g.COURSE_NAME || g.course_name">
+                                        <td>{{ g.COURSE_NAME || g.course_name }}</td>
+                                        <td>{{ g.SCORE || g.score }}</td>
+                                        <td>{{ g.GRADE_POINT || g.grade_point }}</td>
+                                        <td>{{ g.CREDITS || g.credits }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <button class="modal-btn primary" style="margin-top:12px;" @click="loadGrades" :disabled="gradesLoading">{{ gradesLoading ? '加载中...' : '加载成绩' }}</button>
+                        </div>
+                    </div>
+
                     <!-- 考试安排 -->
                     <div v-if="activeSub === 'exam'">
-                        <div class="static-info-card">
+                        <div class="static-info-card info-card-bg">
+                            <div class="bg-left">
+                                <svg viewBox="0 0 120 260" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="10" y="40" width="70" height="90" rx="3" fill="#9AB8D8" opacity="0.7"/><rect x="15" y="45" width="60" height="80" rx="2" fill="#D8E4F4"/>
+                                    <line x1="20" y1="60" x2="70" y2="60" stroke="#6A8AB0" stroke-width="1.2"/><line x1="20" y1="68" x2="55" y2="68" stroke="#6A8AB0" stroke-width="1"/><line x1="20" y1="75" x2="65" y2="75" stroke="#6A8AB0" stroke-width="1"/>
+                                    <line x1="20" y1="85" x2="60" y2="85" stroke="#6A8AB0" stroke-width="1"/><line x1="20" y1="93" x2="50" y2="93" stroke="#6A8AB0" stroke-width="1"/>
+                                    <circle cx="40" cy="155" r="16" fill="#A0B8D8" opacity="0.7"/><line x1="40" y1="155" x2="40" y2="180" stroke="#7898B0" stroke-width="2.5"/>
+                                    <path d="M32 152 Q40 145 48 152" stroke="#7898B0" stroke-width="2" fill="none"/>
+                                </svg>
+                            </div>
+                            <div class="bg-right">
+                                <svg viewBox="0 0 120 260" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="20" y="80" width="50" height="12" rx="2" fill="#8AACD0" opacity="0.7"/><rect x="20" y="96" width="50" height="12" rx="2" fill="#8AACD0" opacity="0.6"/><rect x="20" y="112" width="50" height="12" rx="2" fill="#8AACD0" opacity="0.5"/>
+                                    <rect x="25" y="140" width="15" height="55" rx="2" fill="#C8B898" opacity="0.7"/><rect x="42" y="150" width="15" height="45" rx="2" fill="#B8A888" opacity="0.6"/><rect x="59" y="155" width="12" height="40" rx="2" fill="#A89878" opacity="0.5"/>
+                                    <rect x="28" y="138" width="9" height="4" fill="#E8D8C0" opacity="0.7"/><rect x="45" y="148" width="9" height="4" fill="#E8D8C0" opacity="0.6"/>
+                                </svg>
+                            </div>
                             <div class="info-icon">📝</div><h3>期末考试安排</h3>
                             <p>2025-2026 学年第二学期期末考试</p>
                             <table class="info-table">
@@ -637,7 +788,22 @@
 
                     <!-- 图书馆 -->
                     <div v-if="activeSub === 'library'">
-                        <div class="static-info-card">
+                        <div class="static-info-card info-card-bg">
+                            <div class="bg-left">
+                                <svg viewBox="0 0 120 260" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="15" y="30" width="35" height="180" rx="2" fill="#A09078" opacity="0.7"/><rect x="18" y="35" width="29" height="170" rx="1" fill="#D8D0C0"/>
+                                    <rect x="18" y="38" width="29" height="6" fill="#B8A890" opacity="0.6"/><rect x="18" y="50" width="29" height="5" fill="#C0B098" opacity="0.5"/><rect x="18" y="60" width="29" height="6" fill="#B8A890" opacity="0.55"/><rect x="18" y="72" width="20" height="4" fill="#C0B098" opacity="0.45"/>
+                                    <rect x="60" y="80" width="30" height="6" rx="1" fill="#9AB8D8" opacity="0.6"/><rect x="60" y="92" width="25" height="5" rx="1" fill="#9AB8D8" opacity="0.5"/><rect x="60" y="103" width="22" height="5" rx="1" fill="#9AB8D8" opacity="0.45"/>
+                                </svg>
+                            </div>
+                            <div class="bg-right">
+                                <svg viewBox="0 0 120 260" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="25" y="40" width="70" height="150" rx="2" fill="#8A9AB8" opacity="0.65"/><rect x="25" y="36" width="70" height="8" fill="#6A7AA0" opacity="0.6"/>
+                                    <path d="M35 36 Q60 10 85 36Z" fill="#7A8AB0" opacity="0.55"/>
+                                    <rect x="32" y="52" width="12" height="18" rx="1" fill="#A0B8D8" opacity="0.5"/><rect x="48" y="52" width="12" height="18" rx="1" fill="#A0B8D8" opacity="0.5"/><rect x="64" y="52" width="12" height="18" rx="1" fill="#A0B8D8" opacity="0.5"/><rect x="80" y="52" width="12" height="18" rx="1" fill="#A0B8D8" opacity="0.5"/>
+                                    <rect x="32" y="76" width="12" height="18" rx="1" fill="#A0B8D8" opacity="0.5"/><rect x="48" y="76" width="12" height="18" rx="1" fill="#A0B8D8" opacity="0.5"/>
+                                </svg>
+                            </div>
                             <div class="info-icon">📚</div><h3>图书馆开放时间</h3>
                             <table class="info-table">
                                 <tr><td>周一至周五</td><td>08:00 - 22:00</td></tr>
@@ -734,7 +900,21 @@
 
                     <!-- 毕业手续 -->
                     <div v-if="activeSub === 'graduate'">
-                        <div class="static-info-card">
+                        <div class="static-info-card info-card-bg">
+                            <div class="bg-left">
+                                <svg viewBox="0 0 120 260" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M25 60 L25 95 L45 100 L65 95 L65 60Z" fill="#5A6A8A" opacity="0.7"/><path d="M25 60 L45 48 L65 60Z" fill="#4A5A7A" opacity="0.7"/>
+                                    <rect x="40" y="62" width="10" height="12" rx="1" fill="#D8D0A0" opacity="0.7"/><path d="M35 75 L45 65 L55 75Z" fill="#D8D0A0" opacity="0.5"/>
+                                    <line x1="60" y1="50" x2="68" y2="30" stroke="#6A7A9A" stroke-width="1.5" opacity="0.7"/><circle cx="68" cy="28" r="3" fill="#6A7A9A" opacity="0.7"/>
+                                </svg>
+                            </div>
+                            <div class="bg-right">
+                                <svg viewBox="0 0 120 260" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="30" y="70" width="50" height="65" rx="3" fill="#E8DCC0" opacity="0.7"/><rect x="35" y="78" width="40" height="6" fill="#B09878" opacity="0.5"/><rect x="35" y="90" width="35" height="5" fill="#B09878" opacity="0.45"/><rect x="35" y="100" width="30" height="4" fill="#B09878" opacity="0.4"/>
+                                    <circle cx="55" cy="64" r="6" fill="#C03838" opacity="0.7"/><rect x="52" y="64" width="6" height="8" fill="#C03838" opacity="0.6"/>
+                                    <line x1="55" y1="135" x2="55" y2="170" stroke="#B8A888" stroke-width="2" opacity="0.6"/><path d="M45 155 L55 145 L65 155" stroke="#B8A888" stroke-width="1.5" fill="none" opacity="0.6"/>
+                                </svg>
+                            </div>
                             <div class="info-icon">🎓</div><h3>毕业生离校手续办理</h3>
                             <table class="info-table">
                                 <tr><td>1. 图书馆</td><td>归还所有借阅图书，结清欠费</td></tr>
@@ -749,19 +929,6 @@
                 </div>
             </div>
 
-            <!-- 校园地图视图 -->
-            <div class="map-page" v-show="activeMenu === 'map'">
-                <div class="map-page-header">
-                    <button class="back-btn" @click="backToChat">←</button>
-                    <span class="page-title">{{ mapPageTitle }}</span>
-                </div>
-                <div class="map-page-body">
-                    <div v-if="activeSub === 'map2d'" class="map-placeholder">
-                        <div class="ph-icon">🗺️</div><div class="ph-text">2D 校园地图 — 敬请期待</div>
-                    </div>
-                    <iframe v-if="activeSub === 'map3d'" src="https://www.720yun.com/t/f0vksmfws2b" allowfullscreen></iframe>
-                </div>
-            </div>
         </div>
 
         <!-- Footer -->
@@ -824,6 +991,12 @@ createApp({
             editingNotice: null,
             noticeForm: { title: '', content: '' },
             savingNotice: false,
+            // 课表
+            scheduleData: null,
+            scheduleLoading: false,
+            // 成绩
+            gradesData: null,
+            gradesLoading: false,
         };
     },
     computed: {
@@ -839,7 +1012,7 @@ createApp({
             return this.notices.filter(n => !this.readNoticeIds.includes(n.ID || n.id)).length;
         },
         infoPageTitle() {
-            const t = { notice:'最近通知', exam:'考试安排', library:'图书馆', scholarship:'奖学金', graduate:'毕业手续' };
+            const t = { notice:'最近通知', schedule:'课表查询', grades:'成绩查询', exam:'考试安排', library:'图书馆', scholarship:'奖学金', graduate:'毕业手续' };
             return t[this.activeSub] || '信息查询';
         },
         mapPageTitle() {
@@ -913,6 +1086,53 @@ createApp({
         openInfoPage(sub) {
             this.activeMenu = 'info'; this.activeSub = sub;
             if (sub === 'notice') this.loadNotices();
+            if (sub === 'schedule') this.loadSchedule();
+        },
+        // ===== 课表查询 =====
+        async loadSchedule() {
+            this.scheduleLoading = true; this.scheduleData = null;
+            const role = this.currentUser?.ROLE || this.currentUser?.role;
+            const no = this.currentUser?.TEACHER_NO || this.currentUser?.teacher_no
+                    || this.currentUser?.STUDENT_NO || this.currentUser?.student_no;
+            try {
+                const url = role === 'teacher'
+                    ? `/api/teacher/schedule?teacherNo=${encodeURIComponent(no)}`
+                    : `/api/student/courses?studentNo=${encodeURIComponent(no)}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.success) {
+                    this.scheduleData = data;
+                } else {
+                    alert(data.message || '查询失败');
+                }
+            } catch (e) {
+                alert('网络错误，无法加载课表');
+            }
+            this.scheduleLoading = false;
+        },
+        // 从聊天快捷方式查看课表
+        viewSchedule() {
+            this.openInfoPage('schedule');
+        },
+        // ===== 成绩查询 =====
+        async loadGrades() {
+            this.gradesLoading = true; this.gradesData = null;
+            const no = this.currentUser?.STUDENT_NO || this.currentUser?.student_no;
+            try {
+                const res = await fetch(`/api/student/grades?studentNo=${encodeURIComponent(no)}`);
+                const data = await res.json();
+                if (data.success) {
+                    this.gradesData = data;
+                } else {
+                    alert(data.message || '查询失败');
+                }
+            } catch (e) {
+                alert('网络错误，无法加载成绩');
+            }
+            this.gradesLoading = false;
+        },
+        viewGrades() {
+            this.openInfoPage('grades');
         },
         openMapPage(sub) { this.activeMenu = 'map'; this.activeSub = sub; },
         backToChat() {
