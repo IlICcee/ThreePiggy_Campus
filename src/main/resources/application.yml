@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    # 开发环境 — PostgreSQL + pgvector（Docker 容器）
+    url: jdbc:postgresql://localhost:5432/campus_ai
+    username: sa
+    password: 123456
+    driver-class-name: org.postgresql.Driver
+
+  ai:
+    dashscope:
+      api-key: ${DASHSCOPE_API_KEY:sk-ws-H.RELMPRD.qIUp.MEUCIAlj3GaxUfofMUcmijyT6KWkEcAgu-xI6geBhOYqM8rHAiEA-r3oRofnIOcirSuxsj01fQsmt1YUlAI8lhO-83W7Ylw}
+
+server:
+  port: 8088
