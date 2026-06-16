@@ -70,7 +70,7 @@ public class ChatController {
             // ── 2. RAG: 从向量库检索相关知识 ──
             try {
                 SearchRequest searchReq = SearchRequest.builder()
-                        .query(userMessage).topK(3).similarityThreshold(0.5).build();
+                        .query(userMessage).topK(3).similarityThreshold(0.3).build();
                 List<Document> docs = vectorStore.similaritySearch(searchReq);
                 if (!docs.isEmpty()) {
                     String context = docs.stream()
@@ -145,7 +145,7 @@ public class ChatController {
             SearchRequest searchReq = SearchRequest.builder()
                     .query(q)
                     .topK(5)
-                    .similarityThreshold(0.5)
+                    .similarityThreshold(0.3)
                     .build();
             List<Document> docs = vectorStore.similaritySearch(searchReq);
             List<Map<String, String>> items = docs.stream()

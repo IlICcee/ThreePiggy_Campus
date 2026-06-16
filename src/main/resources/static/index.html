@@ -240,6 +240,9 @@
         .send-btn:hover { transform:scale(1.1); box-shadow:0 4px 16px rgba(91,155,213,0.4); }
         .send-btn:active { transform:scale(0.92); }
         .send-btn:disabled { background:#C8D9E8; cursor:not-allowed; transform:none; box-shadow:none; }
+        .stop-btn { width:44px; height:44px; background:#E74C3C; color:#fff; border:none; border-radius:50%; font-size:14px; cursor:pointer; transition:all 0.25s; flex-shrink:0; display:flex; align-items:center; justify-content:center; animation:pulse 1.2s infinite; }
+        .stop-btn:hover { background:#C0392B; transform:scale(1.1); }
+        @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(231,76,60,0.4)} 50%{box-shadow:0 0 0 8px rgba(231,76,60,0)} }
 
         /* ── 历史会话面板 ── */
         .history-panel {
@@ -655,7 +658,8 @@
                     </div>
                     <div class="input-area">
                         <input v-model="inputText" type="text" placeholder="输入你的问题..." @keydown.enter="send" :disabled="sending" ref="inputRef">
-                        <button class="send-btn" @click="send" :disabled="sending || !inputText.trim()">✈</button>
+                        <button v-if="!sending" class="send-btn" @click="send" :disabled="!inputText.trim()">✈</button>
+                        <button v-else class="stop-btn" @click="stopChat" title="停止生成">■</button>
                     </div>
                 </div>
             </div>
@@ -1255,6 +1259,8 @@ createApp({
             const loadingMsg = { role: 'ai', content: '', loading: true };
             this.messages.push(loadingMsg);
             this.$nextTick(() => this.scrollBottom());
+            // 创建 AbortController 用于停止
+            this._abortCtrl = new AbortController();
             try {
                 const res = await fetch('/api/chat', {
                     method: 'POST',
@@ -1263,7 +1269,8 @@ createApp({
                         message: msg,
                         userRole: this.currentUser?.role || '',
                         userNo: this.currentUser?.teacher_no || this.currentUser?.student_no || ''
-                    })
+                    }),
+                    signal: this._abortCtrl.signal
                 });
                 const idx = this.messages.indexOf(loadingMsg);
                 if (idx > -1) this.messages.splice(idx, 1);
@@ -1271,10 +1278,8 @@ createApp({
                     const errText = await res.text();
                     throw new Error('服务器返回 ' + res.status + ': ' + errText.substring(0, 80));
                 }
-                // 后端返回 {success, message, sources} JSON，取 message 字段
                 const data = await res.json();
                 let content = data.message || '';
-                // 如果有知识库来源，附加显示
                 if (data.sources && data.sources.length > 0) {
                     content += '\n\n📚 参考来源：' + data.sources.join('、');
                 }
@@ -1282,10 +1287,18 @@ createApp({
             } catch (e) {
                 const idx = this.messages.indexOf(loadingMsg);
                 if (idx > -1) this.messages.splice(idx, 1);
-                this.messages.push({ role: 'ai', content: '❌ ' + (e.message || '网络错误') });
+                if (e.name === 'AbortError') {
+                    this.messages.push({ role: 'ai', content: '⏹ 已停止生成' });
+                } else {
+                    this.messages.push({ role: 'ai', content: '❌ ' + (e.message || '网络错误') });
+                }
             }
             this.sending = false;
+            this._abortCtrl = null;
             this.$nextTick(() => { this.scrollBottom(); this.$refs.inputRef?.focus(); });
+        },
+        stopChat() {
+            if (this._abortCtrl) { this._abortCtrl.abort(); this._abortCtrl = null; }
         },
         scrollBottom() {
             const el = this.$refs.msgContainer;
