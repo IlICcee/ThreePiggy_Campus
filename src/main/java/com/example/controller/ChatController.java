@@ -70,7 +70,7 @@ public class ChatController {
             // ── 2. RAG: 从向量库检索相关知识 ──
             try {
                 SearchRequest searchReq = SearchRequest.builder()
-                        .query(userMessage).topK(5).similarityThreshold(0.4).build();
+                        .query(userMessage).topK(3).similarityThreshold(0.5).build();
                 List<Document> docs = vectorStore.similaritySearch(searchReq);
                 if (!docs.isEmpty()) {
                     String context = docs.stream()
@@ -352,20 +352,17 @@ public class ChatController {
                 "LEFT JOIN classroom r ON c.classroom = r.code " +
                 "WHERE t.teacher_no = ? ORDER BY c.schedule_day, c.schedule_time", no);
             if (courses.isEmpty()) return "";
-            sb.append("授课安排：\n");
+            sb.append("授课安排：");
             for (Map<String, Object> c : courses) {
-                sb.append("- ").append(c.get("schedule_day")).append(" ").append(c.get("schedule_time"))
-                  .append("（").append(c.get("start_time")).append("）")
-                  .append(" ").append(c.get("course_name")).append(" @").append(c.get("classroom"));
-                // 教室设施提示
+                sb.append(c.get("schedule_day")).append(c.get("schedule_time")).append(" ")
+                  .append(c.get("course_name")).append("@").append(c.get("classroom"));
                 Boolean ac = (Boolean) c.get("has_ac");
                 Boolean mm = (Boolean) c.get("has_multimedia");
-                String notes = (String) c.get("notes");
-                if (ac != null && !ac) sb.append(" ⚠️无空调");
-                if (mm != null && !mm) sb.append(" ⚠️多媒体故障");
-                if (notes != null && !notes.isEmpty()) sb.append("（").append(notes).append("）");
-                sb.append("\n");
+                if (ac != null && !ac) sb.append("(无空调)");
+                if (mm != null && !mm) sb.append("(多媒体坏)");
+                sb.append(" ");
             }
+            sb.append("\n");
         } else {
             List<Map<String, Object>> info = jdbcTemplate.queryForList(
                 "SELECT name, major, class_name FROM student WHERE student_no = ?", no);
@@ -383,18 +380,19 @@ public class ChatController {
                 "LEFT JOIN classroom r ON c.classroom = r.code " +
                 "WHERE c.major = ? ORDER BY c.schedule_day, c.schedule_time", major);
             if (!schedule.isEmpty()) {
-                sb.append("课表：\n");
+                sb.append("本周课表：");
+                String lastDay = "";
                 for (Map<String, Object> c : schedule) {
-                    sb.append("- ").append(c.get("schedule_day")).append(" ").append(c.get("schedule_time"))
-                      .append("（").append(c.get("start_time")).append("）")
-                      .append(" ").append(c.get("course_name"))
-                      .append(" @").append(c.get("classroom"));
+                    String day = (String) c.get("schedule_day");
+                    if (!day.equals(lastDay)) { sb.append("\n").append(day).append(" "); lastDay = day; }
+                    sb.append(c.get("course_name")).append("(").append(c.get("schedule_time")).append("@").append(c.get("classroom"));
                     Boolean ac = (Boolean) c.get("has_ac");
                     Boolean mm = (Boolean) c.get("has_multimedia");
-                    if (ac != null && !ac) sb.append(" ⚠️无空调");
-                    if (mm != null && !mm) sb.append(" ⚠️多媒体故障");
-                    sb.append("（").append(c.get("teacher")).append("）\n");
+                    if (ac != null && !ac) sb.append("⚠️无空调");
+                    if (mm != null && !mm) sb.append("⚠️多媒体坏");
+                    sb.append(") ");
                 }
+                sb.append("\n");
             }
 
             // -- 成绩 --
@@ -404,15 +402,15 @@ public class ChatController {
                 "JOIN student s ON g.student_id = s.id WHERE s.student_no = ?", no);
             if (!grades.isEmpty()) {
                 double total = 0; double weighted = 0;
-                sb.append("成绩：\n");
+                sb.append("成绩：");
                 for (Map<String, Object> g : grades) {
-                    sb.append("- ").append(g.get("course_name")).append("：").append(g.get("score")).append("分\n");
+                    sb.append(g.get("course_name")).append("=").append(g.get("score")).append(" ");
                     double gp = ((Number) g.get("grade_point")).doubleValue();
                     double cr = ((Number) g.get("credits")).doubleValue();
                     weighted += gp * cr; total += cr;
                 }
                 double gpa = total > 0 ? Math.round(weighted / total * 100.0) / 100.0 : 0;
-                sb.append("GPA：").append(gpa).append("\n");
+                sb.append(" GPA=").append(gpa).append("\n");
             }
         }
         return sb.toString();
